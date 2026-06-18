@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "sparklabx.fullname" . }}-backend
+  labels:
+    {{- include "sparklabx.labels" . | nindent 4 }}
+    component: backend
+---
+{{- if eq .Values.kernelMode "k8s_per_user" }}
+# RBAC only needed when kernelMode=k8s_per_user; the backend spawns and
+# reaps per-user kernel pods directly via the k8s API.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "sparklabx.fullname" . }}-backend
+  labels:
+    {{- include "sparklabx.labels" . | nindent 4 }}
+    component: backend
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "delete", "deletecollection"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "create", "delete"]
+  # Read per-user pod CPU/memory for the Resource Usage widget. Requires
+  # metrics-server installed in the cluster; without it the widget hides.
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "sparklabx.fullname" . }}-backend
+  labels:
+    {{- include "sparklabx.labels" . | nindent 4 }}
+    component: backend
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "sparklabx.fullname" . }}-backend
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "sparklabx.fullname" . }}-backend
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    {{- include "sparklabx.labels" . | nindent 4 }}
+    component: backend
+spec:
+  ports:
+    - port: 10000
+      targetPort: 10000
+  selector:
+    {{- include "sparklabx.selectorLabels" . | nindent 4 }}
+    component: backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    {{- include "sparklabx.labels" . | nindent 4 }}
+    component: backend
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "sparklabx.selectorLabels" . | nindent 6 }}
+      component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "sparklabx.selectorLabels" . | nindent 8 }}
+        component: backend
+    spec:
+      serviceAccountName: {{ include "sparklabx.fullname" . }}-backend
+      containers:
+        - name: backend
+          image: "{{ .Values.image.backend.repository }}:{{ .Values.image.backend.tag }}"
+          imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
+          ports:
+            - containerPort: 10000
+          envFrom:
+            - configMapRef:
+                name: {{ include "sparklabx.fullname" . }}-config
+            - secretRef:
+                name: {{ include "sparklabx.secretName" . }}
+          env:
+            # Tell the in-cluster client which namespace to spawn kernels in.
+            - name: KERNEL_POD_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            # Per-user kernel pod resources. See values.yaml -> kernel.resources.
+            - name: KERNEL_POD_CPU_REQUEST
+              value: {{ .Values.kernel.resources.requests.cpu | quote }}
+            - name: KERNEL_POD_MEMORY_REQUEST
+              value: {{ .Values.kernel.resources.requests.memory | quote }}
+            - name: KERNEL_POD_CPU_LIMIT
+              value: {{ .Values.kernel.resources.limits.cpu | quote }}
+            - name: KERNEL_POD_MEMORY_LIMIT
+              value: {{ .Values.kernel.resources.limits.memory | quote }}
+            {{- with .Values.kernel.resources.presets }}
+            # Per-notebook resource presets (k8s_per_user, issue #41). Serialized
+            # to JSON for the backend; empty list disables the picker entirely.
+            - name: KERNEL_RESOURCE_PRESETS
+              value: {{ toJson . | quote }}
+            - name: KERNEL_RESOURCE_DEFAULT_PRESET
+              value: {{ $.Values.kernel.resources.defaultPreset | default "" | quote }}
+            - name: KERNEL_RESOURCE_ALLOW_CUSTOM
+              value: {{ $.Values.kernel.resources.allowCustom | default false | quote }}
+            - name: KERNEL_RESOURCE_CUSTOM_MAX_CPU
+              value: {{ $.Values.kernel.resources.custom.maxCpu | default "" | quote }}
+            - name: KERNEL_RESOURCE_CUSTOM_MAX_MEMORY
+              value: {{ $.Values.kernel.resources.custom.maxMemory | default "" | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: 10000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 10000
+            initialDelaySeconds: 30
+            periodSeconds: 30

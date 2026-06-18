@@ -1,0 +1,261 @@
+# Default values for sparklabx Helm chart.
+# Override with `--values my-values.yaml` or `--set key=value` on install/upgrade.
+
+# ─────────────────────────────────────────────────────────────
+# Image references — versioned at the release level. Pin to a SHA or
+# semver tag (e.g. v0.3.0) in production; "latest" is fine for dev.
+# ─────────────────────────────────────────────────────────────
+image:
+  backend:
+    repository: ghcr.io/sparklabx/backend
+    tag: latest
+    pullPolicy: Always
+  frontend:
+    repository: ghcr.io/sparklabx/frontend
+    tag: latest
+    pullPolicy: Always
+  kernel:
+    # Image spawned per user when kernelMode=docker_per_user/k8s_per_user.
+    repository: ghcr.io/sparklabx/kernel
+    tag: latest
+    # pullPolicy default is IfNotPresent for kernel image, to speed up startup when already pulled.
+# ─────────────────────────────────────────────────────────────
+# Kernel isolation mode. See README's KERNEL_MODE section.
+#   - shared          : one Jupyter container for everyone (demo only)
+#   - docker_per_user : one container per user via host Docker (single-host)
+#   - k8s_per_user    : one pod per user (production)
+# ─────────────────────────────────────────────────────────────
+kernelMode: k8s_per_user
+
+kernel:
+  # How long an idle kernel survives before the reaper deletes it.
+  idleMinutes: 30
+  # Cluster-wide cap. Prevents one runaway notebook from exhausting nodes.
+  maxTotal: 50
+  # Per-user kernel pod resources. Sets the ceiling each user can use;
+  # Spark driver/executor memory is configured by the user at session time
+  # (within these limits). For docker_per_user mode, only the limits apply
+  # (Docker has no separate "request" concept).
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+    # ── Per-session resource presets (issue #41) ──
+    # OPT-IN. While `presets` is empty the Connect dialog shows no size picker
+    # and every pod uses the requests/limits above — i.e. upgrading changes
+    # nothing. Populate `presets` to let users pick a size per kernel session.
+    #
+    # k8s_per_user: a preset's cpu/memory is applied as BOTH request and limit
+    # (Guaranteed QoS — the user gets exactly what they pick), so size large
+    # presets to what your nodes can actually schedule or pods sit Pending.
+    # docker_per_user: applied as the container's CPU/memory limits.
+    #
+    # Example (uncomment to enable):
+    # presets:
+    #   - { id: medium,  label: "Medium",  cpu: "1", memory: "2Gi"  }
+    #   - { id: large,   label: "Large",   cpu: "2", memory: "4Gi"  }
+    #   - { id: xlarge,  label: "XLarge",  cpu: "4", memory: "8Gi"  }
+    #   - { id: 2xlarge, label: "2XLarge", cpu: "8", memory: "16Gi" }
+    # defaultPreset: medium     # id pre-selected in the dialog
+    # allowCustom: false        # show a "Custom" row with free CPU/memory inputs
+    # custom:
+    #   maxCpu: "16"            # hard ceiling for custom cpu
+    #   maxMemory: "32Gi"       # hard ceiling for custom memory
+    presets: []
+    defaultPreset: ""
+    allowCustom: false
+    custom:
+      maxCpu: ""
+      maxMemory: ""
+
+# ─────────────────────────────────────────────────────────────
+# Pre-pulling image configurations
+# ─────────────────────────────────────────────────────────────
+prepuller:
+  enabled: true
+
+# ─────────────────────────────────────────────────────────────
+# Secrets. Either let the chart create one (default), or point at
+# a pre-existing Secret you manage out-of-band (e.g. via sealed-secrets,
+# external-secrets-operator, or sops).
+#
+# When create=true, values below are written into a Secret. JWT_SECRET_KEY
+# is REQUIRED — generate a strong one with `openssl rand -base64 48`.
+# ─────────────────────────────────────────────────────────────
+secrets:
+  create: true
+  # If create=false, the chart references this Secret by name and skips
+  # creating one. Useful when you store production secrets elsewhere.
+  existingSecret: ""
+
+  jwtSecretKey: ""        # REQUIRED — `openssl rand -base64 48`
+  seedAdmin:
+    username: admin
+    email: admin@example.com
+    password: ""          # REQUIRED — change immediately after first login
+
+  minio:
+    rootUser: minioadmin
+    rootPassword: ""      # REQUIRED — `openssl rand -base64 24`
+
+  # OAuth is optional; leave blank to disable a provider.
+  google:
+    clientId: ""
+    clientSecret: ""
+  microsoft:
+    clientId: ""
+    clientSecret: ""
+    tenantId: ""
+
+# ─────────────────────────────────────────────────────────────
+# Postgres
+#
+# Set `enabled: false` to skip provisioning the in-cluster StatefulSet
+# and point the backend at a managed Postgres (RDS / Cloud SQL / etc.).
+# The `external` block is read only when enabled=false.
+# ─────────────────────────────────────────────────────────────
+postgres:
+  enabled: true
+  external:
+    host: ""          # REQUIRED when enabled=false — e.g., db.internal.corp
+    port: 5432
+  # Connection details — used for BOTH internal and external mode.
+  database:
+    name: sparklabx
+    user: sparklabx
+    password: sparklabx   # change for external; internal default OK for in-cluster
+  # SSL mode for the connection. Default: "disable" for internal (trusted
+  # in-cluster network), "require" for external. Override here if needed.
+  sslMode: ""
+  # Fields below are only used when enabled=true:
+  image:
+    repository: postgres
+    tag: "16-alpine"
+  persistence:
+    enabled: true             # false → emptyDir (data lost on pod restart)
+    storageClass: ""          # "" = cluster default
+    accessModes:
+      - ReadWriteOnce
+    size: 10Gi
+    annotations: {}           # e.g., {velero.io/backup-volumes: data}
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 2000m, memory: 2Gi }
+
+# ─────────────────────────────────────────────────────────────
+# MinIO (S3-compatible storage for notebooks + datasets)
+#
+# Set `enabled: false` to point the backend at an existing S3-compatible
+# endpoint (an external MinIO instance, AWS S3, R2, etc.). Note: per-user
+# IAM provisioning uses MinIO's admin API (madmin-go) — fully functional
+# only when the external endpoint is MinIO. AWS S3 / GCS / R2 work for
+# basic read/write but per-user isolation falls back to root credentials.
+# ─────────────────────────────────────────────────────────────
+minio:
+  enabled: true
+  external:
+    endpoint: ""      # REQUIRED when enabled=false — e.g., https://minio.corp:9000
+  bucket: workspace
+  # Fields below are only used when enabled=true:
+  image:
+    repository: minio/minio
+    tag: latest
+  persistence:
+    enabled: true             # false → emptyDir (data lost on pod restart)
+    storageClass: ""          # "" = cluster default
+    accessModes:
+      - ReadWriteOnce
+    size: 50Gi
+    annotations: {}
+  resources:
+    requests: { cpu: 500m, memory: 1Gi }
+    limits:   { cpu: 2000m, memory: 4Gi }
+
+# ─────────────────────────────────────────────────────────────
+# Backend
+# ─────────────────────────────────────────────────────────────
+backend:
+  replicas: 1
+  resources:
+    requests: { cpu: 200m, memory: 256Mi }
+    limits:   { cpu: 2000m, memory: 1Gi }
+  cors:
+    origins: "*"          # tighten in production to your real domain
+  logLevel: info
+
+# ─────────────────────────────────────────────────────────────
+# Generic OIDC SSO (optional). Any enterprise IdP via OpenID Connect
+# (Keycloak, Okta, Auth0, Azure AD, Google, ...). Leave issuerUrl + clientId
+# blank to disable — login falls back to the seed admin / Google / Microsoft.
+# The login button is driven at runtime via /api/v1/auth/config (no rebuild).
+# clientSecret is written into the chart-managed Secret; the rest into the
+# ConfigMap. redirectUrl / postLoginRedirect default to the ingress host.
+# ─────────────────────────────────────────────────────────────
+sso:
+  issuerUrl: ""           # e.g. https://keycloak.corp/realms/company
+  clientId: ""
+  clientSecret: ""
+  scopes: "openid email profile"
+  providerName: "SSO"     # label on the "Sign in with …" button
+  redirectUrl: ""         # default: https://<ingress.host>/api/v1/auth/oidc/callback
+  postLoginRedirect: ""   # default: https://<ingress.host>
+  # ONLY for split-horizon setups where the backend can't reach the browser
+  # issuer URL (e.g. internal vs external DNS). Leave blank in production.
+  internalIssuerUrl: ""
+
+# ─────────────────────────────────────────────────────────────
+# Connector auth (app-as-issuer). The app signs connector tokens with an RSA key
+# and publishes the public half at /api/v1/.well-known/jwks.json. Data sources
+# (Trino, Postgres, MySQL) are added/managed at runtime in the notebook UI and
+# stored in the database — there's no connector config to declare here.
+# ─────────────────────────────────────────────────────────────
+connector:
+  issuer: "sparklabx"     # token `iss`; must equal each connector's required-issuer
+  # RSA signing key (PEM). Leave blank — the backend generates one on first boot
+  # and persists it in Postgres (stable across restarts, shared by all replicas).
+  # Set only to pin your own key.
+  jwtPrivateKey: ""
+
+# ─────────────────────────────────────────────────────────────
+# Frontend
+# ─────────────────────────────────────────────────────────────
+frontend:
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 500m, memory: 256Mi }
+  service:
+    # ClusterIP   → internal only, access via Ingress or port-forward (default)
+    # NodePort    → expose on every node's IP at a static port (30000-32767)
+    # LoadBalancer → cloud provider provisions an external LB with public IP
+    type: ClusterIP
+    port: 80
+    # When type=NodePort, leave empty to let K8s assign a port, or pin one
+    # in the 30000-32767 range (e.g., 30080).
+    nodePort: ""
+    # When type=LoadBalancer, pin a specific public IP (cloud-specific support).
+    loadBalancerIP: ""
+    annotations: {}
+
+# ─────────────────────────────────────────────────────────────
+# Ingress — set host + ingressClassName for your cluster
+# ─────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx        # match your ingress controller (nginx, traefik, ...)
+  host: sparklabx.example.com
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
+    nginx.ingress.kubernetes.io/client-body-buffer-size: "10m"
+  tls:
+    enabled: true
+    secretName: sparklabx-tls
+    # If using cert-manager, set the ClusterIssuer here. Leave empty
+    # if you provision the TLS Secret manually.
+    certManagerClusterIssuer: letsencrypt-prod

@@ -1,6 +1,6 @@
-"""SparkLabX data connectors — auto-loaded into every Python (PySpark) kernel.
+"""RCN data connectors — auto-loaded into every Python (PySpark) kernel.
 
-The backend injects the configured connectors (SPARKLABX_CONNECTORS). Query any
+The backend injects the configured connectors (RCN_CONNECTORS). Query any
 of them by id with the single helper:
 
     query("<connector-id>", "SELECT ...")    e.g. query("trino", "SELECT 1")
@@ -14,8 +14,8 @@ import os as _os
 import json as _json
 import time as _time
 
-_API = _os.environ.get("SPARKLABX_API_URL")
-_KTOKEN = _os.environ.get("SPARKLABX_KERNEL_TOKEN")
+_API = _os.environ.get("RCN_API_URL")
+_KTOKEN = _os.environ.get("RCN_KERNEL_TOKEN")
 _CRED_PATH = "/api/v1/connectors/{id}/credentials"
 _HTTP_TIMEOUT_S = 10
 _REFRESH_MARGIN_S = 30
@@ -23,7 +23,7 @@ _REFRESH_MARGIN_S = 30
 # id -> {id, driver, url}
 _CONNECTORS = {}
 try:
-    for _c in _json.loads(_os.environ.get("SPARKLABX_CONNECTORS") or "[]"):
+    for _c in _json.loads(_os.environ.get("RCN_CONNECTORS") or "[]"):
         _CONNECTORS[_c["id"]] = _c
 except Exception:
     pass
@@ -49,14 +49,14 @@ def _credential(cid):
             d = _json.loads(resp.read().decode())
     except _ue.HTTPError as e:
         raise RuntimeError(
-            f"SparkLabX: credential endpoint returned HTTP {e.code} for '{cid}' — "
+            f"RCN: credential endpoint returned HTTP {e.code} for '{cid}' — "
             f"your SSO session may have expired (re-login)."
         ) from None
     except Exception as e:
-        raise RuntimeError(f"SparkLabX: cannot reach the credential endpoint for '{cid}' ({e}).") from None
+        raise RuntimeError(f"RCN: cannot reach the credential endpoint for '{cid}' ({e}).") from None
     if d.get("sso_expired"):
         _cred_cache.pop(cid, None)
-        raise RuntimeError("SparkLabX: your SSO session has expired — please log out and log in again.")
+        raise RuntimeError("RCN: your SSO session has expired — please log out and log in again.")
     expires_in = d.get("expires_in") or 0
     cred = {
         "scheme": d.get("scheme", "bearer"),
@@ -76,7 +76,7 @@ def query(connector, sql, url=None):
     spark = SparkSession.builder.getOrCreate()
     conn = _CONNECTORS.get(connector)
     if conn is None and url is None:
-        raise ValueError(f"SparkLabX: unknown connector '{connector}' (configured: {list(_CONNECTORS) or 'none'})")
+        raise ValueError(f"RCN: unknown connector '{connector}' (configured: {list(_CONNECTORS) or 'none'})")
     u = url or conn["url"]
     driver = (conn or {}).get("driver", "io.trino.jdbc.TrinoDriver")
     reader = spark.read.format("jdbc").option("url", u).option("driver", driver)

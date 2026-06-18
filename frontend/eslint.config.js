@@ -21,7 +21,7 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       // react-refresh: conflicts with shadcn/cva pattern that exports
       // both a component and its variants helper from the same file.
-      // Off across the board since SparkLabX uses shadcn extensively.
+      // Off across the board since RCN uses shadcn extensively.
       'react-refresh/only-export-components': 'off',
       // no-explicit-any: subjective; codebase has ~80 legit any uses
       // around Monaco/Jupyter kernel messages and 3rd-party untyped

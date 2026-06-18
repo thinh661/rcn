@@ -1,6 +1,6 @@
 // Package services — aws_sigv4.go implements AWS Signature Version 4 helpers.
 //
-// SparkLabX doesn't run on AWS; this file is needed because MinIO (and any
+// RCN doesn't run on AWS; this file is needed because MinIO (and any
 // S3-compatible store: R2, Backblaze, Garage, etc.) uses the same SigV4
 // protocol as AWS S3 to authenticate REST requests. Every call the backend
 // makes to MinIO — list / put / get / delete object — is signed via these

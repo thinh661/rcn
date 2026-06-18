@@ -105,7 +105,7 @@ const App: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <ThemeProvider defaultTheme="system" storageKey="sparklabx-theme">
+      <ThemeProvider defaultTheme="system" storageKey="RCN-theme">
         <AdminLogin onSuccess={() => setIsAuthenticated(true)} />
       </ThemeProvider>
     );
@@ -113,7 +113,7 @@ const App: React.FC = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="sparklabx-theme">
+      <ThemeProvider defaultTheme="system" storageKey="RCN-theme">
         <Router>
           <AdminLayout />
           <Toaster />

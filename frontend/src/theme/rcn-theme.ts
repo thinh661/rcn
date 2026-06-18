@@ -1,9 +1,9 @@
 /**
- * SparkLabX - Brand Colors & Theme Configuration
+ * RCN - Brand Colors & Theme Configuration
  * Primary Color: Orange (from logo)
  */
 
-export const sparklabxTheme = {
+export const RCNTheme = {
   // Primary Brand Colors
   primary: {
     main: '#F97316',      // Orange-500 (primary brand color)
@@ -48,4 +48,4 @@ export const sparklabxTheme = {
   },
 };
 
-export default sparklabxTheme;
+export default RCNTheme;

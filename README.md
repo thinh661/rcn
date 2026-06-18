@@ -1,10 +1,10 @@
-# SparkLabX Notebook
+# RCN Notebook
 
-[![Build](https://github.com/sparklabx/sparklabx/actions/workflows/release.yml/badge.svg)](https://github.com/sparklabx/sparklabx/actions/workflows/release.yml)
+[![Build](https://github.com/RCN/RCN/actions/workflows/release.yml/badge.svg)](https://github.com/RCN/RCN/actions/workflows/release.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
-[![Backend image](https://img.shields.io/badge/ghcr.io-backend-blue?logo=github)](https://github.com/sparklabx/sparklabx/pkgs/container/backend)
-[![Frontend image](https://img.shields.io/badge/ghcr.io-frontend-blue?logo=github)](https://github.com/sparklabx/sparklabx/pkgs/container/frontend)
-[![Kernel image](https://img.shields.io/badge/ghcr.io-kernel-blue?logo=github)](https://github.com/sparklabx/sparklabx/pkgs/container/kernel)
+[![Backend image](https://img.shields.io/badge/ghcr.io-backend-blue?logo=github)](https://github.com/RCN/RCN/pkgs/container/backend)
+[![Frontend image](https://img.shields.io/badge/ghcr.io-frontend-blue?logo=github)](https://github.com/RCN/RCN/pkgs/container/frontend)
+[![Kernel image](https://img.shields.io/badge/ghcr.io-kernel-blue?logo=github)](https://github.com/RCN/RCN/pkgs/container/kernel)
 
 A self-hosted Jupyter-style notebook for **Apache Spark** with built-in S3 storage,
 per-user isolation, and OAuth login. Designed to be small, opinionated, and
@@ -15,31 +15,31 @@ Scala) and their own S3 storage prefix, enforced by real MinIO IAM (not just
 app-layer checks).
 
 <p>
-  <img src="docs/screenshots/notebook.png" width="49%" alt="SparkLabX notebook — light theme" />
-  <img src="docs/screenshots/notebook-darkmode.png" width="49%" alt="SparkLabX notebook — dark theme" />
+  <img src="docs/screenshots/notebook.png" width="49%" alt="RCN notebook — light theme" />
+  <img src="docs/screenshots/notebook-darkmode.png" width="49%" alt="RCN notebook — dark theme" />
 </p>
 
-<sub>SparkLabX notebook (PySpark / Scala) — light & dark themes.</sub>
+<sub>RCN notebook (PySpark / Scala) — light & dark themes.</sub>
 
 ---
 
 ## 30-second quickstart
 
 ```bash
-git clone https://github.com/sparklabx/sparklabx.git
-cd sparklabx
+git clone https://github.com/RCN/RCN.git
+cd RCN
 ./quickstart.sh
 ```
 
 The script generates random secrets, pulls public Docker images from
-`ghcr.io/sparklabx/`, and starts the stack. It prints the admin password
+`ghcr.io/thinh661/rcn/`, and starts the stack. It prints the admin password
 when done.
 
 Open <http://localhost:3000>, log in as `admin` with the printed password,
 and you're in. OAuth is optional — leave the client IDs blank in `.env`
 to login via username/password only.
 
-![SparkLabX login screen — admin sign-in with optional Google OAuth](docs/screenshots/login.png)
+![RCN login screen — admin sign-in with optional Google OAuth](docs/screenshots/login.png)
 
 ---
 
@@ -89,8 +89,8 @@ to login via username/password only.
 ## Manual setup (if you'd rather skip the script)
 
 ```bash
-git clone https://github.com/sparklabx/sparklabx.git
-cd sparklabx
+git clone https://github.com/RCN/RCN.git
+cd RCN
 cp .env.example .env
 # Edit .env: replace JWT_SECRET_KEY with `openssl rand -base64 48` output,
 # pick a strong SEED_ADMIN_PASSWORD, and optionally fill in OAuth creds.
@@ -104,7 +104,7 @@ can manage the email allowlist via **Settings → Allowed Domains**.
 
 ## Architecture
 
-![SparkLabX architecture diagram](docs/screenshots/architecture.png)
+![RCN architecture diagram](docs/screenshots/architecture.png)
 
 Backend (Go + Gin) responsibilities:
 
@@ -148,10 +148,10 @@ Set in `.env`:
 
 ```bash
 KERNEL_MODE=docker_per_user
-KERNEL_POD_IMAGE=ghcr.io/sparklabx/kernel:latest
+KERNEL_POD_IMAGE=ghcr.io/thinh661/rcn/kernel:latest
 KERNEL_POD_IDLE_MINUTES=30      # auto-reap after idle
 KERNEL_POD_MAX_TOTAL=50
-KERNEL_DOCKER_NETWORK=sparklabx_default
+KERNEL_DOCKER_NETWORK=RCN_default
 ```
 
 The shared `jupyter` service in both compose files is gated behind the
@@ -239,8 +239,8 @@ and `VITE_MICROSOFT_CLIENT_ID/TENANT_ID`.
 Helm chart in [`chart/`](./chart/) — single source of truth.
 
 ```bash
-helm install sparklabx ./chart \
-  --namespace sparklabx --create-namespace \
+helm install RCN ./chart \
+  --namespace RCN --create-namespace \
   --set secrets.jwtSecretKey="$(openssl rand -base64 48)" \
   --set secrets.seedAdmin.password="$(openssl rand -base64 16)" \
   --set secrets.minio.rootPassword="$(openssl rand -base64 24)" \
@@ -259,7 +259,7 @@ Cluster requirements:
 Don't use Helm? Render the chart to raw YAML and `kubectl apply`:
 
 ```bash
-helm template sparklabx ./chart -f my-values.yaml > rendered.yaml
+helm template RCN ./chart -f my-values.yaml > rendered.yaml
 kubectl apply -f rendered.yaml
 ```
 
@@ -410,8 +410,8 @@ go to **Settings → Allowed Domains** and add either a domain
 
 ## Community & support
 
-- **Website**: <https://sparklabx.com>
-- **Issues / discussions**: <https://github.com/sparklabx/sparklabx>
+- **Website**: <https://RCN.com>
+- **Issues / discussions**: <https://github.com/RCN/RCN>
 - **Security reports**: see [SECURITY.md](./SECURITY.md)
 
 ## License

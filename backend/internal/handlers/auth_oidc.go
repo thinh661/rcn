@@ -22,7 +22,7 @@ import (
 
 // Name of the cookie that binds an in-flight OIDC login to this browser. Holds a
 // signed JWT with the state nonce + PKCE code_verifier; checked on callback.
-const oidcFlowCookie = "sparklabx_oidc_flow"
+const oidcFlowCookie = "RCN_oidc_flow"
 
 // Generic OIDC SSO — provider-agnostic backend authorization-code flow.
 //
@@ -33,7 +33,7 @@ const oidcFlowCookie = "sparklabx_oidc_flow"
 //
 // Flow: GET /auth/oidc/start  → 302 to the IdP authorize endpoint
 //       GET /auth/oidc/callback?code&state → exchange code (back-channel),
-//       fetch userinfo, upsert admin, issue the SparkLabX app JWT, then 302
+//       fetch userinfo, upsert admin, issue the RCN app JWT, then 302
 //       back to the SPA with the token in the URL fragment.
 
 type oidcEndpoints struct {
@@ -389,7 +389,7 @@ func (h *AuthHandler) oidcRespond(c *gin.Context, silent bool, appToken, errMsg 
 	base := strings.TrimRight(h.cfg.OIDCPostLoginRedirect, "/")
 	if silent {
 		// json.Marshal escapes <,>,& so this is safe to inline in <script>.
-		payload, _ := json.Marshal(gin.H{"type": "sparklabx-oidc", "ok": errMsg == "", "error": errMsg})
+		payload, _ := json.Marshal(gin.H{"type": "RCN-oidc", "ok": errMsg == "", "error": errMsg})
 		origin, _ := json.Marshal(base)
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		c.String(http.StatusOK,

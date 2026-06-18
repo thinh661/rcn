@@ -1,4 +1,4 @@
-# Default values for sparklabx Helm chart.
+# Default values for RCN Helm chart.
 # Override with `--values my-values.yaml` or `--set key=value` on install/upgrade.
 
 # ─────────────────────────────────────────────────────────────
@@ -7,16 +7,16 @@
 # ─────────────────────────────────────────────────────────────
 image:
   backend:
-    repository: ghcr.io/sparklabx/backend
+    repository: ghcr.io/thinh661/rcn/backend
     tag: latest
     pullPolicy: Always
   frontend:
-    repository: ghcr.io/sparklabx/frontend
+    repository: ghcr.io/thinh661/rcn/frontend
     tag: latest
     pullPolicy: Always
   kernel:
     # Image spawned per user when kernelMode=docker_per_user/k8s_per_user.
-    repository: ghcr.io/sparklabx/kernel
+    repository: ghcr.io/thinh661/rcn/kernel
     tag: latest
     # pullPolicy default is IfNotPresent for kernel image, to speed up startup when already pulled.
 # ─────────────────────────────────────────────────────────────
@@ -125,9 +125,9 @@ postgres:
     port: 5432
   # Connection details — used for BOTH internal and external mode.
   database:
-    name: sparklabx
-    user: sparklabx
-    password: sparklabx   # change for external; internal default OK for in-cluster
+    name: RCN
+    user: RCN
+    password: RCN   # change for external; internal default OK for in-cluster
   # SSL mode for the connection. Default: "disable" for internal (trusted
   # in-cluster network), "require" for external. Override here if needed.
   sslMode: ""
@@ -214,7 +214,7 @@ sso:
 # stored in the database — there's no connector config to declare here.
 # ─────────────────────────────────────────────────────────────
 connector:
-  issuer: "sparklabx"     # token `iss`; must equal each connector's required-issuer
+  issuer: "RCN"     # token `iss`; must equal each connector's required-issuer
   # RSA signing key (PEM). Leave blank — the backend generates one on first boot
   # and persists it in Postgres (stable across restarts, shared by all replicas).
   # Set only to pin your own key.
@@ -247,7 +247,7 @@ frontend:
 ingress:
   enabled: true
   className: nginx        # match your ingress controller (nginx, traefik, ...)
-  host: sparklabx.example.com
+  host: RCN.example.com
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
@@ -255,7 +255,7 @@ ingress:
     nginx.ingress.kubernetes.io/client-body-buffer-size: "10m"
   tls:
     enabled: true
-    secretName: sparklabx-tls
+    secretName: RCN-tls
     # If using cert-manager, set the ClusterIssuer here. Leave empty
     # if you provision the TLS Secret manually.
     certManagerClusterIssuer: letsencrypt-prod

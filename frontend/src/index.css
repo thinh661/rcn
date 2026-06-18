@@ -99,7 +99,7 @@
   --popover: oklch(0.98 0 264.7);
   --popover-foreground: oklch(0.14 0 285.86);
   --primary: oklch(0.59 0.15 185);
-  /* SparkLabX teal */
+  /* RCN teal */
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.95 0.01 258.36);
   --secondary-foreground: oklch(0.21 0.11 263.16);
@@ -139,7 +139,7 @@
   --popover: oklch(0.21 0.01 285.93);
   --popover-foreground: oklch(0.99 0 0);
   --primary: oklch(0.66 0.13 185);
-  /* SparkLabX teal for dark mode */
+  /* RCN teal for dark mode */
   --primary-foreground: oklch(0.1 0 0);
   --secondary: oklch(0.27 0.01 286.1);
   --secondary-foreground: oklch(0.99 0 0);

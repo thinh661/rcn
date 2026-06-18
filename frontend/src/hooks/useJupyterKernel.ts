@@ -614,7 +614,7 @@ export function useJupyterKernel(notebookId: string, kernelProxyUrl?: string) {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsHost = import.meta.env.VITE_BACKEND_WS_URL || `${wsProtocol}//${window.location.host}`;
 
-        const authToken = localStorage.getItem('sparklabx_token');
+        const authToken = localStorage.getItem('RCN_token');
         let wsUrl: string;
         if (kernelProxyUrl) {
             // Exam mode: connect via kernel proxy → Jupyter Kernel Gateway
@@ -632,7 +632,7 @@ export function useJupyterKernel(notebookId: string, kernelProxyUrl?: string) {
         // Check both in-memory (session.kernelId) AND localStorage (survives reload)
         // because DB-restored counts from a previous session would otherwise
         // collide with the new kernel's counter (which restarts at 1).
-        const prevKernelKey = `sparklabx_kernel_${notebookId}`;
+        const prevKernelKey = `RCN_kernel_${notebookId}`;
         const prevKernelId = session.kernelId || localStorage.getItem(prevKernelKey);
         if (prevKernelId && prevKernelId !== kernelId) {
             sessionManager.updateSession(notebookId, { executionCounts: {} });
@@ -890,7 +890,7 @@ export function useJupyterKernel(notebookId: string, kernelProxyUrl?: string) {
         // "Spark already initialized for this kernel" marker is now void —
         // clear it or NotebookPage's auto-init effect would skip re-running the
         // init cell and the new libraries (or a clean restart) would never load.
-        try { localStorage.removeItem(`sparklabx_spark_inited_${notebookId}`); } catch { /* ignore */ }
+        try { localStorage.removeItem(`RCN_spark_inited_${notebookId}`); } catch { /* ignore */ }
         try {
             if (kernelProxyUrl) {
                 await axios.post(`${kernelProxyUrl}/api/kernels/${sess.kernelId}/restart`);
@@ -1280,12 +1280,12 @@ export function useJupyterKernel(notebookId: string, kernelProxyUrl?: string) {
                 version: '5.3'
             },
             parent_header: {},
-            // sparklabx_cell_id lets the backend KernelRecorder tag
+            // RCN_cell_id lets the backend KernelRecorder tag
             // iopub messages from this execution with the originating
             // cell so output can be persisted to cells.last_output
             // even after the browser tab closes. Jupyter ignores
             // unknown metadata fields.
-            metadata: { sparklabx_cell_id: cellId },
+            metadata: { RCN_cell_id: cellId },
             content: {
                 code,
                 silent: options?.silent ?? false,

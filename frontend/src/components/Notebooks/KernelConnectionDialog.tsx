@@ -704,7 +704,7 @@ export function KernelConnectionDialog({
                                 onChange={(e) => setIcebergWarehousePath(e.target.value)}
                             />
                             <p className="text-[10px] text-muted-foreground">
-                                Required for Iceberg. Example: <code>s3a://your-bucket/iceberg_warehouse</code>. SparkLabX will auto-configure an <code>iceberg</code> Hadoop catalog behind the scenes using this warehouse root.
+                                Required for Iceberg. Example: <code>s3a://your-bucket/iceberg_warehouse</code>. RCN will auto-configure an <code>iceberg</code> Hadoop catalog behind the scenes using this warehouse root.
                             </p>
                             <p className="text-[10px] text-muted-foreground">
                                 Use table names like <code>iceberg.default.user_table</code>.

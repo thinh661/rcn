@@ -205,7 +205,7 @@ func (r *KernelRecorder) flushLoop() {
 // ── Public API: register + query ──────────────────────────────────
 
 // RegisterExecution is called by the per-client WS proxy when it sees
-// an execute_request go by, carrying metadata.sparklabx_cell_id so we
+// an execute_request go by, carrying metadata.RCN_cell_id so we
 // can tag iopub messages by cell. Without this mapping the recorder
 // would still buffer outputs but couldn't tell which DB row to write
 // them to.

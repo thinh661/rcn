@@ -251,11 +251,11 @@ fi
 # Strip the previous block first so a rebuilt image refreshes the helpers even
 # on a persisted predef.sc (update-safe, unlike an append-once guard).
 if [ -f "$PREDEF_FILE" ] && ls "$HELPERS_DIR"/*.sc >/dev/null 2>&1; then
-  sed -i '/SPARKLABX-HELPERS-START/,/SPARKLABX-HELPERS-END/d' "$PREDEF_FILE"
+  sed -i '/RCN-HELPERS-START/,/RCN-HELPERS-END/d' "$PREDEF_FILE"
   {
-    echo "// SPARKLABX-HELPERS-START (auto — managed by entrypoint.sh, do not edit)"
+    echo "// RCN-HELPERS-START (auto — managed by entrypoint.sh, do not edit)"
     cat "$HELPERS_DIR"/*.sc
-    echo "// SPARKLABX-HELPERS-END"
+    echo "// RCN-HELPERS-END"
   } >> "$PREDEF_FILE"
   echo "Scala notebook helpers installed: $(ls "$HELPERS_DIR"/*.sc | wc -l | tr -d ' ') file(s)"
 fi

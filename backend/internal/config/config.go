@@ -138,7 +138,7 @@ func Load() *Config {
 		TFStateBucket: getEnv("TF_STATE_BUCKET", ""),
 		TFStateRegion: getEnv("TF_STATE_REGION", ""),
 
-		ServiceName: getEnv("SERVICE_NAME", "sparklabx"),
+		ServiceName: getEnv("SERVICE_NAME", "RCN"),
 		ServicePort: getEnv("SERVICE_PORT", "10000"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 		LogLevel:    getEnv("LOG_LEVEL", "debug"),
@@ -151,17 +151,17 @@ func Load() *Config {
 		JupyterGatewayURL: getEnv("JUPYTER_GATEWAY_URL", "http://jupyter:8888"),
 
 		KernelMode:           getEnv("KERNEL_MODE", "shared"),
-		KernelPodImage:       getEnv("KERNEL_POD_IMAGE", "ghcr.io/sparklabx/kernel:latest"),
-		KernelPodNamespace:   getEnv("KERNEL_POD_NAMESPACE", "sparklabx"),
+		KernelPodImage:       getEnv("KERNEL_POD_IMAGE", "ghcr.io/thinh661/rcn/kernel:latest"),
+		KernelPodNamespace:   getEnv("KERNEL_POD_NAMESPACE", "RCN"),
 		KernelPodIdleMinutes: getEnvInt("KERNEL_POD_IDLE_MINUTES", 30),
 		KernelPodMaxTotal:    getEnvInt("KERNEL_POD_MAX_TOTAL", 50),
-		KernelDockerNetwork:  getEnv("KERNEL_DOCKER_NETWORK", "sparklabx_default"),
+		KernelDockerNetwork:  getEnv("KERNEL_DOCKER_NETWORK", "RCN_default"),
 		KernelPullSecret:     getEnv("KERNEL_PULL_SECRET", ""), // empty → no imagePullSecret
-		KernelCallbackURL:    getEnv("KERNEL_CALLBACK_URL", "http://sparklabx-backend:10000"),
+		KernelCallbackURL:    getEnv("KERNEL_CALLBACK_URL", "http://RCN-backend:10000"),
 
 		ConnectorJWTPrivateKey: getEnv("CONNECTOR_JWT_PRIVATE_KEY", ""),
 		ConnectorJWTKeyFile:    getEnv("CONNECTOR_JWT_PRIVATE_KEY_FILE", ""),
-		ConnectorIssuer:        getEnv("CONNECTOR_ISSUER", "sparklabx"),
+		ConnectorIssuer:        getEnv("CONNECTOR_ISSUER", "RCN"),
 
 		KernelPodCPURequest:    getEnv("KERNEL_POD_CPU_REQUEST", "500m"),
 		KernelPodMemoryRequest: getEnv("KERNEL_POD_MEMORY_REQUEST", "1Gi"),

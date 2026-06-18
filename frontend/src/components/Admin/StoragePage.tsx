@@ -18,14 +18,14 @@ const StoragePage: React.FC = () => {
   const [createBucketOpen, setCreateBucketOpen] = useState(false);
   const [newBucketName, setNewBucketName] = useState('');
   const [buckets, setBuckets] = useState<minioService.MinioBucket[]>([]);
-  const [selectedBucket, setSelectedBucketRaw] = useState(() => localStorage.getItem('sparklabx-storage-bucket') || '');
-  const setSelectedBucket = (b: string) => { setSelectedBucketRaw(b); localStorage.setItem('sparklabx-storage-bucket', b); };
+  const [selectedBucket, setSelectedBucketRaw] = useState(() => localStorage.getItem('RCN-storage-bucket') || '');
+  const setSelectedBucket = (b: string) => { setSelectedBucketRaw(b); localStorage.setItem('RCN-storage-bucket', b); };
   const [files, setFiles] = useState<minioService.MinioFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [currentPath, setCurrentPathRaw] = useState(() => localStorage.getItem('sparklabx-storage-path') || '');
-  const setCurrentPath = (p: string) => { setCurrentPathRaw(p); localStorage.setItem('sparklabx-storage-path', p); };
+  const [currentPath, setCurrentPathRaw] = useState(() => localStorage.getItem('RCN-storage-path') || '');
+  const setCurrentPath = (p: string) => { setCurrentPathRaw(p); localStorage.setItem('RCN-storage-path', p); };
   const [searchQuery, setSearchQuery] = useState('');
   const [available, setAvailable] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

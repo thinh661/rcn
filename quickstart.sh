@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SparkLabX Notebook — one-shot local bootstrap.
+# RCN Notebook — one-shot local bootstrap.
 #
 # What it does:
 #   1. Generates a fresh .env if one doesn't exist (random JWT key + admin password).
@@ -82,7 +82,7 @@ KERNEL_MODE_VAL=$(grep '^KERNEL_MODE=' .env | cut -d= -f2- || echo "shared")
 cat <<EOF
 
 ────────────────────────────────────────────
-SparkLabX Notebook is running.
+RCN Notebook is running.
 
   URL:        http://localhost:3000
   Admin:      ${SEED_USER:-admin}

@@ -1,6 +1,6 @@
-# Contributing to SparkLabX
+# Contributing to RCN
 
-Thanks for your interest in improving SparkLabX. This document explains how
+Thanks for your interest in improving RCN. This document explains how
 to get a local dev environment running, how we expect changes to be
 proposed, and what we look for during review.
 
@@ -20,8 +20,8 @@ proposed, and what we look for during review.
 Prerequisites: Go 1.26+, Node 22+, Docker (for the Spark kernel image).
 
 ```bash
-git clone https://github.com/sparklabx/sparklabx.git
-cd sparklabx
+git clone https://github.com/RCN/RCN.git
+cd RCN
 cp .env.example .env
 # generate a JWT secret and pick an admin password — see .env.example
 

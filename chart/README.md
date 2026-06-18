@@ -1,4 +1,4 @@
-# sparklabx
+# RCN
 
 Self-hosted Apache Spark notebooks with per-user isolation. See the
 [main project README](../README.md) for background.
@@ -6,8 +6,8 @@ Self-hosted Apache Spark notebooks with per-user isolation. See the
 ## Install
 
 ```bash
-helm install sparklabx ./chart \
-  --namespace sparklabx --create-namespace \
+helm install RCN ./chart \
+  --namespace RCN --create-namespace \
   --set secrets.jwtSecretKey="$(openssl rand -base64 48)" \
   --set secrets.seedAdmin.password="$(openssl rand -base64 16)" \
   --set secrets.minio.rootPassword="$(openssl rand -base64 24)" \
@@ -39,7 +39,7 @@ minio:
 ```
 
 ```bash
-helm install sparklabx ./chart -n sparklabx --create-namespace -f my-values.yaml
+helm install RCN ./chart -n RCN --create-namespace -f my-values.yaml
 ```
 
 ## Cluster requirements
@@ -68,7 +68,7 @@ helm install sparklabx ./chart -n sparklabx --create-namespace -f my-values.yaml
 | `minio.enabled` | `true` | `false` → use existing S3-compatible endpoint; fill `minio.external.endpoint`. |
 | `minio.persistence.enabled` | `true` | Same semantics as `postgres.persistence.enabled`. |
 | `minio.persistence.size` | `50Gi` | Bump for big datasets. |
-| `ingress.host` | `sparklabx.example.com` | Required if `ingress.enabled=true`. |
+| `ingress.host` | `RCN.example.com` | Required if `ingress.enabled=true`. |
 | `frontend.service.type` | `ClusterIP` | `ClusterIP` / `NodePort` / `LoadBalancer`. Use `NodePort` when there's no ingress controller; `LoadBalancer` on cloud providers. |
 | `frontend.service.nodePort` | `""` | Static port (30000-32767) when `type=NodePort`. Empty → K8s picks a random port. |
 | `frontend.service.loadBalancerIP` | `""` | Pin a specific public IP when `type=LoadBalancer`. |
@@ -83,9 +83,9 @@ Enable SSO by setting the issuer, client ID, and client secret — register
 `https://<ingress.host>/api/v1/auth/oidc/callback` as the redirect URI at your IdP:
 
 ```bash
-helm upgrade --install sparklabx ./chart \
+helm upgrade --install RCN ./chart \
   --set sso.issuerUrl=https://keycloak.corp/realms/company \
-  --set sso.clientId=sparklabx \
+  --set sso.clientId=RCN \
   --set sso.clientSecret="$OIDC_CLIENT_SECRET" \
   --set trino.url='jdbc:trino://trino.corp:443?SSL=true'
 ```
@@ -108,8 +108,8 @@ postgres:
     host: my-database.us-east-1.rds.amazonaws.com
     port: 5432
   database:
-    name: sparklabx
-    user: sparklabx
+    name: RCN
+    user: RCN
     password: "<from secrets manager>"
   sslMode: require  # auto-defaults to "require" when enabled=false
 
@@ -142,7 +142,7 @@ Full list: see [`values.yaml`](./values.yaml).
 Inspect what the chart would apply:
 
 ```bash
-helm template sparklabx ./chart -f my-values.yaml > rendered.yaml
+helm template RCN ./chart -f my-values.yaml > rendered.yaml
 ```
 
 Useful for review, GitOps (commit the output to Argo/Flux), or for users
@@ -151,7 +151,7 @@ who don't want to run `helm install` directly.
 ## Upgrade
 
 ```bash
-helm upgrade sparklabx ./chart -n sparklabx -f my-values.yaml
+helm upgrade RCN ./chart -n RCN -f my-values.yaml
 ```
 
 PVCs are preserved across upgrades. Backend handles its own migrations
@@ -160,12 +160,12 @@ at startup, so no separate migration job is needed.
 ## Uninstall
 
 ```bash
-helm uninstall sparklabx -n sparklabx
+helm uninstall RCN -n RCN
 ```
 
 **PVCs are NOT deleted automatically** — your notebook data + Postgres
 state survive. To wipe everything:
 
 ```bash
-kubectl -n sparklabx delete pvc -l app.kubernetes.io/instance=sparklabx
+kubectl -n RCN delete pvc -l app.kubernetes.io/instance=RCN
 ```

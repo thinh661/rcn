@@ -115,7 +115,7 @@ const INIT_CELL_ID = 'init-spark-context';
 // Machine-readable marker the init template prints on success. This is the
 // authoritative "Spark is ready" signal in BOTH languages — match on this, not
 // on the human-facing ✅ strings (kept only as a legacy fallback).
-const SPARK_READY_MARKER = '__SPARKLABX_SPARK_READY__';
+const SPARK_READY_MARKER = '__RCN_SPARK_READY__';
 
 // Spark-init wait budgets (ms). The package window is generous because the first
 // connect resolves JARs via Ivy/Maven, whose RESOLVE step alone can take minutes
@@ -129,8 +129,8 @@ const KERNEL_READY_TIMEOUT_MS = 60_000;
 
 // Per-notebook localStorage keys (read+write in several places — build once so a
 // typo can't desync the read and write sites).
-const kernelIdKey = (notebookId: string) => `sparklabx_kernel_${notebookId}`;
-const sparkInitedKey = (notebookId: string) => `sparklabx_spark_inited_${notebookId}`;
+const kernelIdKey = (notebookId: string) => `RCN_kernel_${notebookId}`;
+const sparkInitedKey = (notebookId: string) => `RCN_spark_inited_${notebookId}`;
 
 // Main NotebookPage component
 export default function NotebookPage() {
@@ -417,7 +417,7 @@ export default function NotebookPage() {
                     .join('\n');
 
                 let sparkBuilder = `SparkSession.builder \\
-        .appName("SparkLabX Session") \\
+        .appName("RCN Session") \\
         .master("local[*]") \\
         .config("spark.driver.memory", "2g") \\
         .config("spark.executor.memory", "2g")${s3aEndpointConfigPy}${extraConfigLines}`;
@@ -470,11 +470,11 @@ try:
         print("Spark Session already active")
 
     # DataFrame display helpers (bare df / display() → HTML, .show() → ASCII) are
-    # installed from the kernel image (helpers/01-sparklabx-display.py), not from
+    # installed from the kernel image (helpers/01-RCN-display.py), not from
     # here — keeps foreign code out of the frontend bundle.
 ${runtimeConfigLinesPy ? `${runtimeConfigLinesPy}
 ` : ''}
-    print("__SPARKLABX_SPARK_READY__")
+    print("__RCN_SPARK_READY__")
 except Exception as _e:
     spark = globals().get("spark", None)
     globals()["spark"] = spark
@@ -591,7 +591,7 @@ try {
         case _: Throwable => // log4j API may differ across versions; ignore
     }
     println(s"✅ Spark Session Active: \${s.version}")
-    println("__SPARKLABX_SPARK_READY__")
+    println("__RCN_SPARK_READY__")
 } catch {
     case e: Throwable =>
         println(s"❌ Spark initialization failed: \${e.getMessage}")
@@ -737,12 +737,12 @@ try {
 
     // Sidebar state
     const [sidebarTab, setSidebarTabRaw] = useState<'toc' | 'workspace' | 'catalog' | 'settings' | 'files'>(() => {
-        const saved = localStorage.getItem('sparklabx-sidebar-tab');
+        const saved = localStorage.getItem('RCN-sidebar-tab');
         return (['toc', 'workspace', 'catalog', 'settings', 'files'].includes(saved || '') ? saved : 'workspace') as any;
     });
     const setSidebarTab = (tab: typeof sidebarTab) => {
         setSidebarTabRaw(tab);
-        localStorage.setItem('sparklabx-sidebar-tab', tab);
+        localStorage.setItem('RCN-sidebar-tab', tab);
     };
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -974,12 +974,12 @@ try {
 
     const getStoredKernelProfile = () => {
         const cc = (notebook as any)?.cluster_config || {};
-        const cpu = cc['sparklabx.kernel.resourceCpu'] as string | undefined;
-        const memory = cc['sparklabx.kernel.resourceMemory'] as string | undefined;
+        const cpu = cc['RCN.kernel.resourceCpu'] as string | undefined;
+        const memory = cc['RCN.kernel.resourceMemory'] as string | undefined;
         return {
             sparkPackages: (cc['spark.jars.packages'] as string | undefined) || undefined,
             icebergWarehousePath: (cc['spark.sql.catalog.iceberg.warehouse'] as string | undefined) || undefined,
-            resourcePreset: (cc['sparklabx.kernel.resourcePreset'] as string | undefined) || undefined,
+            resourcePreset: (cc['RCN.kernel.resourcePreset'] as string | undefined) || undefined,
             resourceCustom: cpu && memory ? { cpu, memory } : undefined,
         };
     };
@@ -1008,11 +1008,11 @@ try {
                 // next time (e.g. reconnecting after an idle reap). These keys are
                 // ignored by Spark; only the Connect flow reads them.
                 if (options.resourceCustom) {
-                    nextClusterConfig['sparklabx.kernel.resourcePreset'] = 'custom';
-                    nextClusterConfig['sparklabx.kernel.resourceCpu'] = options.resourceCustom.cpu;
-                    nextClusterConfig['sparklabx.kernel.resourceMemory'] = options.resourceCustom.memory;
+                    nextClusterConfig['RCN.kernel.resourcePreset'] = 'custom';
+                    nextClusterConfig['RCN.kernel.resourceCpu'] = options.resourceCustom.cpu;
+                    nextClusterConfig['RCN.kernel.resourceMemory'] = options.resourceCustom.memory;
                 } else if (options.resourcePreset) {
-                    nextClusterConfig['sparklabx.kernel.resourcePreset'] = options.resourcePreset;
+                    nextClusterConfig['RCN.kernel.resourcePreset'] = options.resourcePreset;
                 }
                 await updateNotebook({ cluster_config: nextClusterConfig });
                 devLog('[NotebookPage] Saved spark packages to notebook config');
@@ -1384,7 +1384,7 @@ try {
                         const xhr = new XMLHttpRequest();
                         xhr.open('PUT', `/api/v1/notebooks/${notebookRef.current!.id}/cells/${cellId}`, false); // sync
                         xhr.setRequestHeader('Content-Type', 'application/json');
-                        const token = localStorage.getItem('sparklabx_token');
+                        const token = localStorage.getItem('RCN_token');
                         if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
                         try { xhr.send(JSON.stringify({ source: cell.source })); } catch { /* best effort */ }
                     }
@@ -2173,13 +2173,13 @@ try {
                 onConnect={handleKernelDialogConnect}
                 savedPackages={(notebook as any)?.cluster_config?.['spark.jars.packages'] || ''}
                 savedIcebergWarehousePath={(notebook as any)?.cluster_config?.['spark.sql.catalog.iceberg.warehouse'] || ''}
-                savedResourcePreset={(notebook as any)?.cluster_config?.['sparklabx.kernel.resourcePreset'] || ''}
+                savedResourcePreset={(notebook as any)?.cluster_config?.['RCN.kernel.resourcePreset'] || ''}
                 savedResourceCustom={
-                    (notebook as any)?.cluster_config?.['sparklabx.kernel.resourceCpu'] &&
-                    (notebook as any)?.cluster_config?.['sparklabx.kernel.resourceMemory']
+                    (notebook as any)?.cluster_config?.['RCN.kernel.resourceCpu'] &&
+                    (notebook as any)?.cluster_config?.['RCN.kernel.resourceMemory']
                         ? {
-                              cpu: (notebook as any).cluster_config['sparklabx.kernel.resourceCpu'],
-                              memory: (notebook as any).cluster_config['sparklabx.kernel.resourceMemory'],
+                              cpu: (notebook as any).cluster_config['RCN.kernel.resourceCpu'],
+                              memory: (notebook as any).cluster_config['RCN.kernel.resourceMemory'],
                           }
                         : undefined
                 }

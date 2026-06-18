@@ -50,7 +50,7 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
             ? (isDark ? "/logo-icon-dark.png?v=2" : "/logo-icon.png")
             : (isDark ? "/logo-dark.png?v=2" : "/logo.png")
           }
-          alt="SparkLabX"
+          alt="RCN"
           className={cn(collapsed ? "h-10" : "h-12")}
         />
       </div>

@@ -2,9 +2,9 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 const API_BASE = '/api/v1';
-const TOKEN_KEY = 'sparklabx_token';
-const USER_KEY = 'sparklabx_user';
-const ROLE_KEY = 'sparklabx_role';
+const TOKEN_KEY = 'RCN_token';
+const USER_KEY = 'RCN_user';
+const ROLE_KEY = 'RCN_role';
 
 export interface User {
   id: string;
@@ -215,7 +215,7 @@ class AuthService {
       };
       const onMsg = (e: MessageEvent) => {
         if (e.origin !== window.location.origin) return;
-        if (e.data && e.data.type === 'sparklabx-oidc') finish(!!e.data.ok);
+        if (e.data && e.data.type === 'RCN-oidc') finish(!!e.data.ok);
       };
       const timer = window.setTimeout(() => finish(false), timeoutMs);
       window.addEventListener('message', onMsg);

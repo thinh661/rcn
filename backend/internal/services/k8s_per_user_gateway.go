@@ -68,9 +68,9 @@ type K8sPerUserConfig struct {
 	IdleTimeout                time.Duration              // delete pod after this long without activity
 	MaxPods                    int                        // hard cap on concurrent pods cluster-wide
 	PullSecret                 string                     // optional imagePullSecret name; empty → none
-	CredsResolver              UserCredsResolver          // nil → use root creds from sparklabx-secrets (legacy)
-	OIDCTokenResolver          UserOIDCTokenResolver      // returns the kernel callback token (SPARKLABX_KERNEL_TOKEN); nil → no SSO passthrough
-	KernelAPIURL               string                     // injected as SPARKLABX_API_URL so the kernel can fetch a fresh OIDC token
+	CredsResolver              UserCredsResolver          // nil → use root creds from RCN-secrets (legacy)
+	OIDCTokenResolver          UserOIDCTokenResolver      // returns the kernel callback token (RCN_KERNEL_TOKEN); nil → no SSO passthrough
+	KernelAPIURL               string                     // injected as RCN_API_URL so the kernel can fetch a fresh OIDC token
 	ConnectorsManifestProvider func(userID string) string // live per-user manifest at spawn time; nil → use ConnectorsManifest
 
 	// Per-pod resource quantities ("500m", "1Gi"). Empty → fall back to
@@ -709,7 +709,7 @@ func (g *K8sPerUserGateway) buildPodSpec(userID, podName string, res podSizes) *
 				Name: "AWS_ACCESS_KEY_ID",
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "sparklabx-secrets"},
+						LocalObjectReference: corev1.LocalObjectReference{Name: "RCN-secrets"},
 						Key:                  "MINIO_ROOT_USER",
 					},
 				},
@@ -718,7 +718,7 @@ func (g *K8sPerUserGateway) buildPodSpec(userID, podName string, res podSizes) *
 				Name: "AWS_SECRET_ACCESS_KEY",
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{Name: "sparklabx-secrets"},
+						LocalObjectReference: corev1.LocalObjectReference{Name: "RCN-secrets"},
 						Key:                  "MINIO_ROOT_PASSWORD",
 					},
 				},
@@ -732,14 +732,14 @@ func (g *K8sPerUserGateway) buildPodSpec(userID, podName string, res podSizes) *
 		if tok, err := g.cfg.OIDCTokenResolver(userID); err != nil {
 			log.Warn().Err(err).Str("user", userID).Msg("OIDCTokenResolver failed; no SSO passthrough")
 		} else if tok != "" {
-			awsEnv = append(awsEnv, corev1.EnvVar{Name: "SPARKLABX_KERNEL_TOKEN", Value: tok})
+			awsEnv = append(awsEnv, corev1.EnvVar{Name: "RCN_KERNEL_TOKEN", Value: tok})
 			if g.cfg.KernelAPIURL != "" {
-				awsEnv = append(awsEnv, corev1.EnvVar{Name: "SPARKLABX_API_URL", Value: g.cfg.KernelAPIURL})
+				awsEnv = append(awsEnv, corev1.EnvVar{Name: "RCN_API_URL", Value: g.cfg.KernelAPIURL})
 			}
 		}
 	}
 	if m := resolveConnectorsManifest(g.cfg.ConnectorsManifestProvider, userID); m != "" {
-		awsEnv = append(awsEnv, corev1.EnvVar{Name: "SPARKLABX_CONNECTORS", Value: m})
+		awsEnv = append(awsEnv, corev1.EnvVar{Name: "RCN_CONNECTORS", Value: m})
 	}
 
 	return &corev1.Pod{
@@ -748,8 +748,8 @@ func (g *K8sPerUserGateway) buildPodSpec(userID, podName string, res podSizes) *
 			Namespace: g.cfg.Namespace,
 			Labels: map[string]string{
 				"app":            "kernel-pod",
-				"managed-by":     "sparklabx",
-				"sparklabx-user": labelSafe(userID),
+				"managed-by":     "RCN",
+				"RCN-user": labelSafe(userID),
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -788,7 +788,7 @@ func (g *K8sPerUserGateway) buildPodSpec(userID, podName string, res podSizes) *
 						Name: "S3_ENDPOINT",
 						ValueFrom: &corev1.EnvVarSource{
 							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "sparklabx-config"},
+								LocalObjectReference: corev1.LocalObjectReference{Name: "RCN-config"},
 								Key:                  "MINIO_ENDPOINT",
 							},
 						},
@@ -916,7 +916,7 @@ func (g *K8sPerUserGateway) flushTouchLoop() {
 //   - status=failed + older than 60s        → drop row so FE doesn't see stale error
 //   - status=spawning/pulling/starting + older than spawn timeout → assume crashed, drop
 //   - status=ready but pod is gone / Failed / CrashLoopBackOff (reapDeadPods)
-//   - any pod with managed-by=sparklabx label not tracked in DB (sweepOrphanPods)
+//   - any pod with managed-by=RCN label not tracked in DB (sweepOrphanPods)
 func (g *K8sPerUserGateway) reaperLoop() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
@@ -1096,7 +1096,7 @@ func podIsDead(p *corev1.Pod) (bool, string) {
 	return false, ""
 }
 
-// sweepOrphanPods deletes pods labeled managed-by=sparklabx that have no
+// sweepOrphanPods deletes pods labeled managed-by=RCN that have no
 // DB row tracking them. These are leftovers from a backend crash mid-spawn
 // or mid-destroy. The 1-minute age filter avoids racing with a spawn
 // that just created the pod but hasn't inserted the DB row yet.
@@ -1105,7 +1105,7 @@ func (g *K8sPerUserGateway) sweepOrphanPods() {
 	defer cancel()
 
 	pods, err := g.client.CoreV1().Pods(g.cfg.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "managed-by=sparklabx",
+		LabelSelector: "managed-by=RCN",
 	})
 	if err != nil {
 		return

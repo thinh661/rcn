@@ -1,4 +1,4 @@
-<!-- Thanks for contributing to SparkLabX. Please fill in the sections below. -->
+<!-- Thanks for contributing to RCN. Please fill in the sections below. -->
 
 ## Summary
 

@@ -6,9 +6,9 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "sparklabx.fullname" . }}-config
+  name: {{ include "RCN.fullname" . }}-config
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
 data:
   # DATABASE_URL contains the Postgres password and lives in the Secret
   # (see secret.yaml). Non-sensitive Postgres fields stay here so the
@@ -40,5 +40,5 @@ data:
   CONNECTOR_ISSUER: {{ .Values.connector.issuer | quote }}
   # Backend URL reachable FROM kernel pods (in-session OIDC token refresh). The
   # backend Service is named "backend" in this chart, so the config.go default
-  # (sparklabx-backend) would be wrong — set the in-cluster FQDN explicitly.
+  # (RCN-backend) would be wrong — set the in-cluster FQDN explicitly.
   KERNEL_CALLBACK_URL: {{ printf "http://backend.%s.svc.cluster.local:10000" .Release.Namespace | quote }}

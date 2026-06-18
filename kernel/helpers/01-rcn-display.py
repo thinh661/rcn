@@ -1,4 +1,4 @@
-"""SparkLabX DataFrame display helpers — auto-loaded into every Python kernel.
+"""RCN DataFrame display helpers — auto-loaded into every Python kernel.
 
 Makes a bare `df` (or display(df)) render as a pretty HTML table, while
 df.show() keeps Spark's native ASCII output — consistent with the Scala kernel,

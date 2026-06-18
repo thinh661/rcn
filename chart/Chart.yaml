@@ -6,10 +6,10 @@ type: application
 # image tag — keep in sync with the GitHub release.
 version: 0.3.0
 appVersion: "main"
-home: https://github.com/sparklabx/sparklabx
+home: https://github.com/RCN/RCN
 sources:
-  - https://github.com/sparklabx/sparklabx
-icon: https://raw.githubusercontent.com/sparklabx/sparklabx/main/frontend/public/logo-icon.png
+  - https://github.com/RCN/RCN
+icon: https://raw.githubusercontent.com/RCN/RCN/main/frontend/public/logo-icon.png
 keywords:
   - spark
   - notebook
@@ -18,5 +18,5 @@ keywords:
   - scala
   - self-hosted
 maintainers:
-  - name: SparkLabX
-    url: https://github.com/sparklabx
+  - name: RCN
+    url: https://github.com/RCN

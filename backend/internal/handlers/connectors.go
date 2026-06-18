@@ -106,7 +106,7 @@ func (h *AuthHandler) connectorInstances(userID string) []ConnectorInstance {
 	return out
 }
 
-// ConnectorsKernelManifest is the JSON injected into kernels (SPARKLABX_CONNECTORS)
+// ConnectorsKernelManifest is the JSON injected into kernels (RCN_CONNECTORS)
 // so the generic data helpers can build a reader per connector: {id, driver, url}.
 // Credentials are fetched per query from /connectors/:id/credentials, not here.
 func (h *AuthHandler) ConnectorsKernelManifest(userID string) string {

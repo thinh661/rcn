@@ -17,7 +17,7 @@ export function Header({ className }: HeaderProps) {
         {/* Left side - Title */}
         <div className="flex items-center gap-4">
           <h1 className="text-heading-sm text-foreground">
-            SparkLabX
+            RCN
           </h1>
           <div className="hidden md:flex items-center gap-2">
             <div className="h-4 w-px bg-border" />

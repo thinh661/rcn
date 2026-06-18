@@ -6,7 +6,7 @@ This file serves as a context stabilizer and guide to help AI coding assistants 
 
 ## 1. Project Overview & Architecture
 
-**SparkLabX** is a self-hosted, Jupyter-style notebook platform designed for **Apache Spark (PySpark & Scala)**. It features end-to-end user isolation via MinIO S3 IAM and dynamic kernel container provisioning.
+**RCN** is a self-hosted, Jupyter-style notebook platform designed for **Apache Spark (PySpark & Scala)**. It features end-to-end user isolation via MinIO S3 IAM and dynamic kernel container provisioning.
 
 ### Technology Stack
 *   **Frontend**: React 19 (TypeScript), Vite, Tailwind CSS v4, Monaco Editor (code editor), Radix UI (UI primitives), TanStack React Query (server-state).
@@ -18,7 +18,7 @@ This file serves as a context stabilizer and guide to help AI coding assistants 
 ## 2. Directory Layout & Core Components
 
 ```
-📂 sparklabx/
+📂 RCN/
  ├── 📂 backend/
  │    ├── 📂 cmd/server/main.go        # HTTP Server Entry & Service Dependency Wiring
  │    └── 📂 internal/
@@ -54,7 +54,7 @@ This file serves as a context stabilizer and guide to help AI coding assistants 
 
 ### B. OIDC & Connector Authentication (SSO Passthrough & App-as-Issuer)
 *   **Decoupled Authentication**: The application acts as its own OIDC Issuer (RS256 JWTs) and publishes its JWKS at `/api/v1/.well-known/jwks.json`.
-*   **Connecting from Kernel**: When code running on the Jupyter kernel needs to execute a query via `query("connector_id", "SELECT...")`, it contacts the backend API `/api/v1/connectors/:id/credentials` using a short-lived `SPARKLABX_KERNEL_TOKEN`.
+*   **Connecting from Kernel**: When code running on the Jupyter kernel needs to execute a query via `query("connector_id", "SELECT...")`, it contacts the backend API `/api/v1/connectors/:id/credentials` using a short-lived `RCN_KERNEL_TOKEN`.
 *   **Credentials Resolving**:
     *   `app-jwt` (default): The app mints a custom RS256 JWT representing the user's SSO identity. External systems (like Trino) validate this token against the app's JWKS.
     *   `broker-mapped`: Uses personal credentials (username/password) stored AES-GCM encrypted in the database.

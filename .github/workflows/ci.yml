@@ -115,7 +115,7 @@ jobs:
         run: helm lint chart/
       - name: helm template (render check)
         run: |
-          helm template sparklabx chart/ \
+          helm template RCN chart/ \
             --set secrets.jwtSecretKey=dummy \
             --set secrets.seedAdmin.password=dummy \
             --set secrets.minio.rootPassword=dummy \

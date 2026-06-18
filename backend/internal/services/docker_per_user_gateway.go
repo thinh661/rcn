@@ -51,13 +51,13 @@ const usageTTL = 2 * time.Second
 
 type DockerPerUserConfig struct {
 	Image                      string                     // kernel image to run
-	Network                    string                     // docker network name backend is on (default: "sparklabx_default")
+	Network                    string                     // docker network name backend is on (default: "RCN_default")
 	IdleTimeout                time.Duration              // reap container after this long idle
 	MaxContainers              int                        // hard cap; rejects spawn beyond
 	MinIOEndpoint              string                     // injected as S3_ENDPOINT env so kernel reaches MinIO
 	CredsResolver              UserCredsResolver          // nil → fall back to root creds via env passthrough
-	OIDCTokenResolver          UserOIDCTokenResolver      // returns the kernel callback token (SPARKLABX_KERNEL_TOKEN); nil → no SSO passthrough
-	KernelAPIURL               string                     // injected as SPARKLABX_API_URL so the kernel can fetch a fresh OIDC token
+	OIDCTokenResolver          UserOIDCTokenResolver      // returns the kernel callback token (RCN_KERNEL_TOKEN); nil → no SSO passthrough
+	KernelAPIURL               string                     // injected as RCN_API_URL so the kernel can fetch a fresh OIDC token
 	ConnectorsManifestProvider func(userID string) string // live per-user manifest at spawn time; nil → use ConnectorsManifest
 
 	// Per-container limits in k8s quantity format ("500m", "1Gi"). Docker
@@ -84,7 +84,7 @@ func NewDockerPerUserGateway(cfg DockerPerUserConfig) (*DockerPerUserGateway, er
 		cfg.Image = DefaultKernelImage
 	}
 	if cfg.Network == "" {
-		cfg.Network = "sparklabx_default"
+		cfg.Network = "RCN_default"
 	}
 	if cfg.IdleTimeout == 0 {
 		cfg.IdleTimeout = 30 * time.Minute
@@ -132,7 +132,7 @@ func (g *DockerPerUserGateway) IdleTimeout() time.Duration { return g.cfg.IdleTi
 // user. Truncated SHA1 keeps it short; backend restart still finds it.
 func dockerContainerName(userID string) string {
 	h := sha1.Sum([]byte(userID))
-	return "sparklabx-kernel-" + hex.EncodeToString(h[:6])
+	return "RCN-kernel-" + hex.EncodeToString(h[:6])
 }
 
 // hostConfig builds the Docker HostConfig fragment. Resource limits are
@@ -346,9 +346,9 @@ func (g *DockerPerUserGateway) EnsureSpawning(userID string, spec *ResourceSpec)
 		if tok, err := g.cfg.OIDCTokenResolver(userID); err != nil {
 			log.Warn().Err(err).Str("user", userID).Msg("OIDCTokenResolver failed; no SSO passthrough")
 		} else if tok != "" {
-			env = append(env, "SPARKLABX_KERNEL_TOKEN="+tok)
+			env = append(env, "RCN_KERNEL_TOKEN="+tok)
 			if g.cfg.KernelAPIURL != "" {
-				env = append(env, "SPARKLABX_API_URL="+g.cfg.KernelAPIURL)
+				env = append(env, "RCN_API_URL="+g.cfg.KernelAPIURL)
 			}
 		}
 	}
@@ -356,7 +356,7 @@ func (g *DockerPerUserGateway) EnsureSpawning(userID string, spec *ResourceSpec)
 	// Connector manifest ([{id,driver,url}]) for the generic data helpers; each
 	// connector gets an alias that fetches a fresh credential per query.
 	if m := resolveConnectorsManifest(g.cfg.ConnectorsManifestProvider, userID); m != "" {
-		env = append(env, "SPARKLABX_CONNECTORS="+m)
+		env = append(env, "RCN_CONNECTORS="+m)
 	}
 
 	// Per-spawn limits: user-picked spec wins over the configured defaults.
@@ -387,8 +387,8 @@ func (g *DockerPerUserGateway) EnsureSpawning(userID string, spec *ResourceSpec)
 		"Image": g.cfg.Image,
 		"Env":   env,
 		"Labels": map[string]string{
-			"sparklabx.kernel": "1",
-			"sparklabx.user":   userID,
+			"RCN.kernel": "1",
+			"RCN.user":   userID,
 		},
 		"ExposedPorts": map[string]any{"8888/tcp": map[string]any{}},
 		"HostConfig":   hostConfig(g.cfg, nanoCPUs, memoryBytes),
@@ -753,7 +753,7 @@ func (g *DockerPerUserGateway) containerRemove(ctx context.Context, name string)
 }
 
 func (g *DockerPerUserGateway) countKernelContainers(ctx context.Context) (int, error) {
-	resp, err := g.dockerReq(ctx, "GET", `/containers/json?filters={"label":["sparklabx.kernel=1"]}`, nil)
+	resp, err := g.dockerReq(ctx, "GET", `/containers/json?filters={"label":["RCN.kernel=1"]}`, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -810,7 +810,7 @@ func (g *DockerPerUserGateway) setReadyURL(userID, url, name string) {
 //  2. reapDead      — Destroy DB rows whose container is in a dead state
 //     (exited / dead / removing / vanished) so the next
 //     connect-kernel call spawns fresh instead of looping.
-//  3. sweepOrphans  — Remove containers labeled sparklabx.kernel=1 that
+//  3. sweepOrphans  — Remove containers labeled RCN.kernel=1 that
 //     have no DB row (left behind by crashes or manual rm).
 func (g *DockerPerUserGateway) reaperLoop() {
 	tick := time.NewTicker(5 * time.Minute)
@@ -917,7 +917,7 @@ func (g *DockerPerUserGateway) reapDead() {
 	}
 }
 
-// sweepOrphans removes kernel containers labeled sparklabx.kernel=1 that
+// sweepOrphans removes kernel containers labeled RCN.kernel=1 that
 // have no matching DB row. These are leftovers from backend crashes that
 // happened mid-spawn or mid-destroy. The age filter (1 minute) avoids
 // racing with a spawn that just created the container but hasn't inserted
@@ -927,7 +927,7 @@ func (g *DockerPerUserGateway) sweepOrphans() {
 	defer cancel()
 
 	resp, err := g.dockerReq(ctx, "GET",
-		`/containers/json?all=true&filters={"label":["sparklabx.kernel=1"]}`, nil)
+		`/containers/json?all=true&filters={"label":["RCN.kernel=1"]}`, nil)
 	if err != nil {
 		return
 	}

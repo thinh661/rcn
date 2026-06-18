@@ -22,12 +22,12 @@ interface ScopeMeta {
 export const SidebarFiles: React.FC = () => {
     const [scopes, setScopes] = useState<ScopeMeta[]>([]);
     const [activeScope, setActiveScopeRaw] = useState<Scope>(() => {
-        const saved = localStorage.getItem('sparklabx-files-scope');
+        const saved = localStorage.getItem('RCN-files-scope');
         return saved === 'public' ? 'public' : 'my';
     });
     const setActiveScope = (s: Scope) => {
         setActiveScopeRaw(s);
-        localStorage.setItem('sparklabx-files-scope', s);
+        localStorage.setItem('RCN-files-scope', s);
         setCurrentPath('');
     };
     const [files, setFiles] = useState<minioService.MinioFile[]>([]);
@@ -35,11 +35,11 @@ export const SidebarFiles: React.FC = () => {
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [currentPath, setCurrentPathRaw] = useState<string>(() => {
-        return localStorage.getItem('sparklabx-files-path') || '';
+        return localStorage.getItem('RCN-files-path') || '';
     });
     const setCurrentPath = (path: string) => {
         setCurrentPathRaw(path);
-        localStorage.setItem('sparklabx-files-path', path);
+        localStorage.setItem('RCN-files-path', path);
     };
     const fileInputRef = useRef<HTMLInputElement>(null);
 

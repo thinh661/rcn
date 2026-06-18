@@ -1,12 +1,12 @@
-# SparkLabX notebook kernel image: Jupyter Kernel Gateway + Spark + S3A support.
+# RCN notebook kernel image: Jupyter Kernel Gateway + Spark + S3A support.
 # Used by all three KERNEL_MODE deployment options (shared, docker_per_user,
 # k8s_per_user). The image installs hadoop-aws + AWS SDK so s3a:// reads from
 # MinIO or any S3-compatible store work out of the box.
 #
-# Base image is built from github.com/sparklabx/notebook-kernel (Almond fork
+# Base image is built from github.com/RCN/notebook-kernel (Almond fork
 # bundled with Jupyter Kernel Gateway + PySpark Connect). Multi-arch
 # (linux/amd64 + linux/arm64) — runs natively on M-series Macs and Graviton.
-FROM ghcr.io/sparklabx/kernel-base:latest
+FROM ghcr.io/thinh661/rcn/kernel-base:latest
 
 WORKDIR /home/exam
 

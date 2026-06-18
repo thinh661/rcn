@@ -189,8 +189,8 @@ const LoginForm: React.FC<LoginProps> = ({ onSuccess }) => {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-3 pb-2">
-          <img src="/logo.png" alt="SparkLabX" className="h-12 mx-auto dark:hidden" />
-          <img src="/logo-dark.png?v=2" alt="SparkLabX" className="h-12 mx-auto hidden dark:block" />
+          <img src="/logo.png" alt="RCN" className="h-12 mx-auto dark:hidden" />
+          <img src="/logo-dark.png?v=2" alt="RCN" className="h-12 mx-auto hidden dark:block" />
         </CardHeader>
         <CardContent className="space-y-3">
           {error && (
@@ -251,7 +251,7 @@ const LoginForm: React.FC<LoginProps> = ({ onSuccess }) => {
                 <Label htmlFor="identifier" className="text-xs">Username or Email</Label>
                 <Input
                   id="identifier"
-                  placeholder="admin or admin@sparklabx.com"
+                  placeholder="admin or admin@RCN.com"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="h-9"

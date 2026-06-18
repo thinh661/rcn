@@ -2,17 +2,17 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ include "sparklabx.fullname" . }}-kernel-prepuller
+  name: {{ include "RCN.fullname" . }}-kernel-prepuller
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      app: {{ include "sparklabx.fullname" . }}-kernel-prepuller
+      app: {{ include "RCN.fullname" . }}-kernel-prepuller
   template:
     metadata:
       labels:
-        app: {{ include "sparklabx.fullname" . }}-kernel-prepuller
+        app: {{ include "RCN.fullname" . }}-kernel-prepuller
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

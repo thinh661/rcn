@@ -311,7 +311,7 @@ var (
 
 // completeOAuthLogin is the shared tail of every OAuth/OIDC login once an
 // identity (email/name) has been resolved from the provider: enforce the email
-// allowlist, auto-provision the admin, and mint the SparkLabX app JWT. The
+// allowlist, auto-provision the admin, and mint the RCN app JWT. The
 // front half — how the provider token is obtained (JS-SDK popup for
 // Google/Microsoft, the server-side code flow for generic OIDC) — differs per
 // provider and stays in the individual handlers. This keeps the three login

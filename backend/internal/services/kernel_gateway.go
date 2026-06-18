@@ -107,7 +107,7 @@ var ErrUsageUnsupported = fmt.Errorf("resource usage not supported")
 // DefaultKernelImage is the canonical public kernel image. Used as the fallback
 // in both Docker and K8s per-user gateways when KERNEL_POD_IMAGE isn't set in
 // the environment. Set KERNEL_POD_IMAGE to override (e.g. to your own fork).
-const DefaultKernelImage = "ghcr.io/sparklabx/kernel:latest"
+const DefaultKernelImage = "ghcr.io/thinh661/rcn/kernel:latest"
 
 // SharedGateway returns the same fixed URL for every caller. No spawn, no reap.
 type SharedGateway struct {
@@ -157,10 +157,10 @@ type KernelGatewaySettings struct {
 	MaxKernels        int           // hard cap on concurrent kernels
 	PullSecret        string        // optional K8s imagePullSecret name (empty → none)
 	CredsResolver     UserCredsResolver
-	OIDCTokenResolver UserOIDCTokenResolver // returns the kernel's callback token (SPARKLABX_KERNEL_TOKEN); nil → no SSO passthrough
-	KernelAPIURL      string                // backend URL injected as SPARKLABX_API_URL so kernels can fetch a fresh OIDC token
+	OIDCTokenResolver UserOIDCTokenResolver // returns the kernel's callback token (RCN_KERNEL_TOKEN); nil → no SSO passthrough
+	KernelAPIURL      string                // backend URL injected as RCN_API_URL so kernels can fetch a fresh OIDC token
 	// ConnectorsManifestProvider is called at each kernel spawn with the spawning
-	// user's id to get the SPARKLABX_CONNECTORS manifest of connectors VISIBLE to
+	// user's id to get the RCN_CONNECTORS manifest of connectors VISIBLE to
 	// that user (shared + their personal) — so runtime adds/removes reach new
 	// kernels without a restart.
 	ConnectorsManifestProvider func(userID string) string
@@ -174,7 +174,7 @@ type KernelGatewaySettings struct {
 	PodMemoryLimit   string
 }
 
-// resolveConnectorsManifest returns the SPARKLABX_CONNECTORS JSON to inject for
+// resolveConnectorsManifest returns the RCN_CONNECTORS JSON to inject for
 // userID at spawn (connectors visible to that user), or "" when no provider.
 func resolveConnectorsManifest(provider func(string) string, userID string) string {
 	if provider != nil {

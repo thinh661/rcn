@@ -7,7 +7,7 @@ services:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
         VITE_MICROSOFT_CLIENT_ID: ${VITE_MICROSOFT_CLIENT_ID}
         VITE_MICROSOFT_TENANT_ID: ${VITE_MICROSOFT_TENANT_ID}
-    container_name: sparklabx-frontend
+    container_name: RCN-frontend
     ports:
       - "3000:80"
     depends_on:
@@ -18,11 +18,11 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: sparklabx-backend
+    container_name: RCN-backend
     ports:
       - "10000:10000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgres://sparklabx:sparklabx@postgres:5432/sparklabx?sslmode=disable}
+      - DATABASE_URL=${DATABASE_URL:-postgres://RCN:RCN@postgres:5432/RCN?sslmode=disable}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-480}
       - SEED_ADMIN_USERNAME=${SEED_ADMIN_USERNAME}
@@ -41,11 +41,11 @@ services:
       - OIDC_PROVIDER_NAME=${OIDC_PROVIDER_NAME:-SSO}
       - OIDC_REDIRECT_URL=${OIDC_REDIRECT_URL}
       - OIDC_POST_LOGIN_REDIRECT=${OIDC_POST_LOGIN_REDIRECT:-http://localhost:3000}
-      - CONNECTOR_ISSUER=${CONNECTOR_ISSUER:-sparklabx}
+      - CONNECTOR_ISSUER=${CONNECTOR_ISSUER:-RCN}
       # Connector signing key is generated on first boot and persisted in Postgres
       # (app_secrets) — stable across restarts, no volume. Set CONNECTOR_JWT_PRIVATE_KEY
       # only to pin your own PEM.
-      - KERNEL_CALLBACK_URL=${KERNEL_CALLBACK_URL:-http://sparklabx-backend:10000}
+      - KERNEL_CALLBACK_URL=${KERNEL_CALLBACK_URL:-http://RCN-backend:10000}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - MINIO_ENDPOINT=http://minio:9000
@@ -53,8 +53,8 @@ services:
       - MINIO_SECRET_KEY=minioadmin
       - JUPYTER_GATEWAY_URL=http://jupyter:8888
       - KERNEL_MODE=${KERNEL_MODE:-shared}
-      - KERNEL_POD_IMAGE=${KERNEL_POD_IMAGE:-ghcr.io/sparklabx/kernel:latest}
-      - KERNEL_DOCKER_NETWORK=${KERNEL_DOCKER_NETWORK:-sparklabx_default}
+      - KERNEL_POD_IMAGE=${KERNEL_POD_IMAGE:-ghcr.io/thinh661/rcn/kernel:latest}
+      - KERNEL_DOCKER_NETWORK=${KERNEL_DOCKER_NETWORK:-RCN_default}
       # Per-session resource presets (issue #41). Empty → picker hidden.
       # k8s: request=limit on the pod. docker: container CPU/memory limits.
       - KERNEL_RESOURCE_PRESETS=${KERNEL_RESOURCE_PRESETS:-}
@@ -74,8 +74,8 @@ services:
     restart: unless-stopped
 
   kernel-cache:
-    image: ghcr.io/sparklabx/kernel:latest
-    container_name: sparklabx-kernel-cache
+    image: ghcr.io/thinh661/rcn/kernel:latest
+    container_name: RCN-kernel-cache
     entrypoint: ["echo", "Kernel image cached"]
 
   # Shared Jupyter kernel — only used when KERNEL_MODE=shared. Skipped by
@@ -91,8 +91,8 @@ services:
     build:
       context: ./kernel
       dockerfile: Dockerfile
-    image: ghcr.io/sparklabx/kernel:latest
-    container_name: sparklabx-jupyter
+    image: ghcr.io/thinh661/rcn/kernel:latest
+    container_name: RCN-jupyter
     environment:
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
@@ -105,7 +105,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: sparklabx-minio
+    container_name: RCN-minio
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"
@@ -124,7 +124,7 @@ services:
 
   # tunnel:
   #   image: cloudflare/cloudflared:latest
-  #   container_name: sparklabx-tunnel
+  #   container_name: RCN-tunnel
   #   command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
   #   depends_on:
   #     - frontend
@@ -132,11 +132,11 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: sparklabx-postgres
+    container_name: RCN-postgres
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-sparklabx}
-      POSTGRES_USER: ${POSTGRES_USER:-sparklabx}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sparklabx}
+      POSTGRES_DB: ${POSTGRES_DB:-RCN}
+      POSTGRES_USER: ${POSTGRES_USER:-RCN}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-RCN}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -147,8 +147,8 @@ volumes:
 
 # Pin the network name so it doesn't depend on the project directory. Backend
 # joins per-user kernel containers to this network via KERNEL_DOCKER_NETWORK,
-# which defaults to "sparklabx_default" — keep that working regardless of
+# which defaults to "RCN_default" — keep that working regardless of
 # where the repo is checked out.
 networks:
   default:
-    name: sparklabx_default
+    name: RCN_default

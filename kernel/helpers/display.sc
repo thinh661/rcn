@@ -1,11 +1,11 @@
-// SparkLabX: pretty HTML rendering for Spark DataFrames in Scala notebooks.
+// RCN: pretty HTML rendering for Spark DataFrames in Scala notebooks.
 // Use display(df) for an HTML table; df.show() stays Spark's native ASCII output.
 //
 // We deliberately do NOT register a jvm-repr displayer for Dataset: Ammonite
 // echoes EVERY `val df = ...` binding, so a displayer would collect()+render the
 // whole table on every assignment (and double up with df.show()). So unlike the
 // Python twin (where a bare `df` is HTML via _repr_html_ and assignments are
-// silent), Scala HTML is explicit via display(df). Python twin: 01-sparklabx-display.py.
+// silent), Scala HTML is explicit via display(df). Python twin: 01-RCN-display.py.
 
 // .toDF coerces typed Datasets to Row so .isNullAt / .get(i) are valid.
 def _spxDfHtml(df: org.apache.spark.sql.Dataset[_], n: Int): String = {

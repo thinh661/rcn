@@ -4,7 +4,7 @@ kind: Service
 metadata:
   name: postgres
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
     component: postgres
 spec:
   clusterIP: None
@@ -12,7 +12,7 @@ spec:
     - port: 5432
       targetPort: 5432
   selector:
-    {{- include "sparklabx.selectorLabels" . | nindent 4 }}
+    {{- include "RCN.selectorLabels" . | nindent 4 }}
     component: postgres
 ---
 apiVersion: apps/v1
@@ -20,19 +20,19 @@ kind: StatefulSet
 metadata:
   name: postgres
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
     component: postgres
 spec:
   serviceName: postgres
   replicas: 1
   selector:
     matchLabels:
-      {{- include "sparklabx.selectorLabels" . | nindent 6 }}
+      {{- include "RCN.selectorLabels" . | nindent 6 }}
       component: postgres
   template:
     metadata:
       labels:
-        {{- include "sparklabx.selectorLabels" . | nindent 8 }}
+        {{- include "RCN.selectorLabels" . | nindent 8 }}
         component: postgres
     spec:
       # postgres alpine image runs as uid 70 — fix ownership before the
@@ -49,12 +49,12 @@ spec:
           image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
           envFrom:
             - configMapRef:
-                name: {{ include "sparklabx.fullname" . }}-config
+                name: {{ include "RCN.fullname" . }}-config
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "sparklabx.secretName" . }}
+                  name: {{ include "RCN.secretName" . }}
                   key: POSTGRES_PASSWORD
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata

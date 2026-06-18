@@ -1026,7 +1026,7 @@ func (h *LocalKernelHandler) WebSocket(c *gin.Context) {
 }
 
 // captureExecuteRequest sniffs an outgoing client message; if it's an
-// execute_request carrying metadata.sparklabx_cell_id, register the
+// execute_request carrying metadata.RCN_cell_id, register the
 // (msg_id → cell_id) mapping on the kernel's recorder so iopub
 // messages from this execution can be routed to the right cell.
 func captureExecuteRequest(kernelID string, msg []byte) {
@@ -1039,7 +1039,7 @@ func captureExecuteRequest(kernelID string, msg []byte) {
 			MsgID   string `json:"msg_id"`
 		} `json:"header"`
 		Metadata struct {
-			CellID string `json:"sparklabx_cell_id"`
+			CellID string `json:"RCN_cell_id"`
 		} `json:"metadata"`
 	}
 	if err := json.Unmarshal(msg, &parsed); err != nil {

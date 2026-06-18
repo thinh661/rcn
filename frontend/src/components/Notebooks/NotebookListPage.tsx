@@ -46,7 +46,7 @@ export default function NotebookListPage() {
     // Auto-redirect to last opened notebook
     React.useEffect(() => {
         if (!loading && notebooks.length > 0) {
-            const lastId = localStorage.getItem('sparklabx-last-notebook');
+            const lastId = localStorage.getItem('RCN-last-notebook');
             if (lastId && notebooks.some(n => n.id === lastId)) {
                 navigate(`/notebooks/${lastId}`, { replace: true });
             }
@@ -94,7 +94,7 @@ export default function NotebookListPage() {
     };
 
     const handleOpen = (id: string) => {
-        localStorage.setItem('sparklabx-last-notebook', id);
+        localStorage.setItem('RCN-last-notebook', id);
         navigate(`/notebooks/${id}`);
     };
 

@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "sparklabx.fullname" . }}-backend
+  name: {{ include "RCN.fullname" . }}-backend
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
     component: backend
 ---
 {{- if eq .Values.kernelMode "k8s_per_user" }}
@@ -12,9 +12,9 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "sparklabx.fullname" . }}-backend
+  name: {{ include "RCN.fullname" . }}-backend
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
     component: backend
 rules:
   - apiGroups: [""]
@@ -35,18 +35,18 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "sparklabx.fullname" . }}-backend
+  name: {{ include "RCN.fullname" . }}-backend
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
     component: backend
 subjects:
   - kind: ServiceAccount
-    name: {{ include "sparklabx.fullname" . }}-backend
+    name: {{ include "RCN.fullname" . }}-backend
     namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "sparklabx.fullname" . }}-backend
+  name: {{ include "RCN.fullname" . }}-backend
 ---
 {{- end }}
 apiVersion: v1
@@ -54,14 +54,14 @@ kind: Service
 metadata:
   name: backend
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
     component: backend
 spec:
   ports:
     - port: 10000
       targetPort: 10000
   selector:
-    {{- include "sparklabx.selectorLabels" . | nindent 4 }}
+    {{- include "RCN.selectorLabels" . | nindent 4 }}
     component: backend
 ---
 apiVersion: apps/v1
@@ -69,21 +69,21 @@ kind: Deployment
 metadata:
   name: backend
   labels:
-    {{- include "sparklabx.labels" . | nindent 4 }}
+    {{- include "RCN.labels" . | nindent 4 }}
     component: backend
 spec:
   replicas: {{ .Values.backend.replicas }}
   selector:
     matchLabels:
-      {{- include "sparklabx.selectorLabels" . | nindent 6 }}
+      {{- include "RCN.selectorLabels" . | nindent 6 }}
       component: backend
   template:
     metadata:
       labels:
-        {{- include "sparklabx.selectorLabels" . | nindent 8 }}
+        {{- include "RCN.selectorLabels" . | nindent 8 }}
         component: backend
     spec:
-      serviceAccountName: {{ include "sparklabx.fullname" . }}-backend
+      serviceAccountName: {{ include "RCN.fullname" . }}-backend
       containers:
         - name: backend
           image: "{{ .Values.image.backend.repository }}:{{ .Values.image.backend.tag }}"
@@ -92,9 +92,9 @@ spec:
             - containerPort: 10000
           envFrom:
             - configMapRef:
-                name: {{ include "sparklabx.fullname" . }}-config
+                name: {{ include "RCN.fullname" . }}-config
             - secretRef:
-                name: {{ include "sparklabx.secretName" . }}
+                name: {{ include "RCN.secretName" . }}
           env:
             # Tell the in-cluster client which namespace to spawn kernels in.
             - name: KERNEL_POD_NAMESPACE

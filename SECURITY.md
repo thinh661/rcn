@@ -2,10 +2,10 @@
 
 ## Reporting a vulnerability
 
-If you find a security issue in SparkLabX, please report it privately so we
+If you find a security issue in RCN, please report it privately so we
 can fix it before it becomes public:
 
-- Email: **security@sparklabx.com**
+- Email: **security@RCN.com**
 
 Please **do not** open a public GitHub issue for security problems.
 
@@ -29,7 +29,7 @@ patches. Older releases are best-effort.
 
 ## Threat model
 
-SparkLabX assumes:
+RCN assumes:
 
 - **Authenticated users may be adversarial** — the per-user MinIO IAM isolation
   is the primary control. Spark code in one user's notebook cannot read another

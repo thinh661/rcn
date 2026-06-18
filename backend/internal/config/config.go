@@ -151,7 +151,7 @@ func Load() *Config {
 		JupyterGatewayURL: getEnv("JUPYTER_GATEWAY_URL", "http://jupyter:8888"),
 
 		KernelMode:           getEnv("KERNEL_MODE", "shared"),
-		KernelPodImage:       getEnv("KERNEL_POD_IMAGE", "ghcr.io/thinh661/rcn/kernel:latest"),
+		KernelPodImage:       getEnv("KERNEL_POD_IMAGE", "ghcr.io/sparklabx/kernel:latest"),
 		KernelPodNamespace:   getEnv("KERNEL_POD_NAMESPACE", "RCN"),
 		KernelPodIdleMinutes: getEnvInt("KERNEL_POD_IDLE_MINUTES", 30),
 		KernelPodMaxTotal:    getEnvInt("KERNEL_POD_MAX_TOTAL", 50),

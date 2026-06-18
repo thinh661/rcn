@@ -53,7 +53,7 @@ services:
       - MINIO_SECRET_KEY=minioadmin
       - JUPYTER_GATEWAY_URL=http://jupyter:8888
       - KERNEL_MODE=${KERNEL_MODE:-shared}
-      - KERNEL_POD_IMAGE=${KERNEL_POD_IMAGE:-ghcr.io/thinh661/rcn/kernel:latest}
+      - KERNEL_POD_IMAGE=${KERNEL_POD_IMAGE:-ghcr.io/sparklabx/kernel:latest}
       - KERNEL_DOCKER_NETWORK=${KERNEL_DOCKER_NETWORK:-RCN_default}
       # Per-session resource presets (issue #41). Empty → picker hidden.
       # k8s: request=limit on the pod. docker: container CPU/memory limits.
@@ -74,7 +74,7 @@ services:
     restart: unless-stopped
 
   kernel-cache:
-    image: ghcr.io/thinh661/rcn/kernel:latest
+    image: ghcr.io/sparklabx/kernel:latest
     container_name: RCN-kernel-cache
     entrypoint: ["echo", "Kernel image cached"]
 
@@ -91,7 +91,7 @@ services:
     build:
       context: ./kernel
       dockerfile: Dockerfile
-    image: ghcr.io/thinh661/rcn/kernel:latest
+    image: ghcr.io/sparklabx/kernel:latest
     container_name: RCN-jupyter
     environment:
       - AWS_ACCESS_KEY_ID=minioadmin

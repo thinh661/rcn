@@ -32,7 +32,7 @@ cd RCN
 ```
 
 The script generates random secrets, pulls public Docker images from
-`ghcr.io/thinh661/rcn/`, and starts the stack. It prints the admin password
+`ghcr.io/sparklabx/`, and starts the stack. It prints the admin password
 when done.
 
 Open <http://localhost:3000>, log in as `admin` with the printed password,
@@ -148,7 +148,7 @@ Set in `.env`:
 
 ```bash
 KERNEL_MODE=docker_per_user
-KERNEL_POD_IMAGE=ghcr.io/thinh661/rcn/kernel:latest
+KERNEL_POD_IMAGE=ghcr.io/sparklabx/kernel:latest
 KERNEL_POD_IDLE_MINUTES=30      # auto-reap after idle
 KERNEL_POD_MAX_TOTAL=50
 KERNEL_DOCKER_NETWORK=RCN_default

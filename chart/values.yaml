@@ -7,16 +7,16 @@
 # ─────────────────────────────────────────────────────────────
 image:
   backend:
-    repository: ghcr.io/thinh661/rcn/backend
+    repository: ghcr.io/sparklabx/backend
     tag: latest
     pullPolicy: Always
   frontend:
-    repository: ghcr.io/thinh661/rcn/frontend
+    repository: ghcr.io/sparklabx/frontend
     tag: latest
     pullPolicy: Always
   kernel:
     # Image spawned per user when kernelMode=docker_per_user/k8s_per_user.
-    repository: ghcr.io/thinh661/rcn/kernel
+    repository: ghcr.io/sparklabx/kernel
     tag: latest
     # pullPolicy default is IfNotPresent for kernel image, to speed up startup when already pulled.
 # ─────────────────────────────────────────────────────────────

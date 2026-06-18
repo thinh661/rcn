@@ -107,7 +107,7 @@ var ErrUsageUnsupported = fmt.Errorf("resource usage not supported")
 // DefaultKernelImage is the canonical public kernel image. Used as the fallback
 // in both Docker and K8s per-user gateways when KERNEL_POD_IMAGE isn't set in
 // the environment. Set KERNEL_POD_IMAGE to override (e.g. to your own fork).
-const DefaultKernelImage = "ghcr.io/thinh661/rcn/kernel:latest"
+const DefaultKernelImage = "ghcr.io/sparklabx/kernel:latest"
 
 // SharedGateway returns the same fixed URL for every caller. No spawn, no reap.
 type SharedGateway struct {

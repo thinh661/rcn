@@ -6,7 +6,7 @@
 # Base image is built from github.com/RCN/notebook-kernel (Almond fork
 # bundled with Jupyter Kernel Gateway + PySpark Connect). Multi-arch
 # (linux/amd64 + linux/arm64) — runs natively on M-series Macs and Graviton.
-FROM ghcr.io/thinh661/rcn/kernel-base:latest
+FROM ghcr.io/sparklabx/kernel-base:latest
 
 WORKDIR /home/exam
 

@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ghcr.io/thinh661/rcn/frontend:latest
+    image: ghcr.io/sparklabx/frontend:latest
     container_name: RCN-frontend
     ports:
       - "3000:80"
@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/thinh661/rcn/backend:latest
+    image: ghcr.io/sparklabx/backend:latest
     container_name: RCN-backend
     ports:
       - "10000:10000"
@@ -47,7 +47,7 @@ services:
       # IAM isolation locally) | "k8s_per_user" (production). The docker_per_user
       # mode requires the docker.sock bind below.
       - KERNEL_MODE=${KERNEL_MODE:-shared}
-      - KERNEL_POD_IMAGE=${KERNEL_POD_IMAGE:-ghcr.io/thinh661/rcn/kernel:latest}
+      - KERNEL_POD_IMAGE=${KERNEL_POD_IMAGE:-ghcr.io/sparklabx/kernel:latest}
       - KERNEL_DOCKER_NETWORK=${KERNEL_DOCKER_NETWORK:-RCN_default}
       - SERVICE_PORT=10000
       - ENVIRONMENT=production
@@ -65,7 +65,7 @@ services:
     restart: unless-stopped
 
   kernel-cache:
-    image: ghcr.io/thinh661/rcn/kernel:latest
+    image: ghcr.io/sparklabx/kernel:latest
     container_name: RCN-kernel-cache
     entrypoint: ["echo", "Kernel image cached"]
 
@@ -74,7 +74,7 @@ services:
   #   docker compose --profile shared up jupyter
   jupyter:
     profiles: ["shared"]
-    image: ghcr.io/thinh661/rcn/kernel:latest
+    image: ghcr.io/sparklabx/kernel:latest
     container_name: RCN-jupyter
     environment:
       - AWS_ACCESS_KEY_ID=minioadmin

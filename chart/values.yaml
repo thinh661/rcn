@@ -92,15 +92,15 @@ secrets:
   # creating one. Useful when you store production secrets elsewhere.
   existingSecret: ""
 
-  jwtSecretKey: ""        # REQUIRED — `openssl rand -base64 48`
+  jwtSecretKey: "mY48JAS66uzRMesKNmwRcz82IpzlMtMfW7HQG3AirVxk17B7O/dQF9PG0JgOyzW3"        # REQUIRED — `openssl rand -base64 48`
   seedAdmin:
     username: admin
     email: admin@example.com
-    password: ""          # REQUIRED — change immediately after first login
+    password: "RCNAdminPassword2026!"          # REQUIRED — change immediately after first login
 
   minio:
     rootUser: minioadmin
-    rootPassword: ""      # REQUIRED — `openssl rand -base64 24`
+    rootPassword: "TWqGwiSUaRH7LJQUkNbPelAdlz0AH+iH"      # REQUIRED — `openssl rand -base64 24`
 
   # OAuth is optional; leave blank to disable a provider.
   google:
@@ -127,7 +127,7 @@ postgres:
   database:
     name: RCN
     user: RCN
-    password: RCN   # change for external; internal default OK for in-cluster
+    password: RCNPostgresPassword2026!   # change for external; internal default OK for in-cluster
   # SSL mode for the connection. Default: "disable" for internal (trusted
   # in-cluster network), "require" for external. Override here if needed.
   sslMode: ""
@@ -246,16 +246,12 @@ frontend:
 # ─────────────────────────────────────────────────────────────
 ingress:
   enabled: true
-  className: nginx        # match your ingress controller (nginx, traefik, ...)
-  host: RCN.example.com
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-body-size: "2048m"
-    nginx.ingress.kubernetes.io/client-body-buffer-size: "10m"
+  className: traefik        # match your ingress controller (nginx, traefik, ...)
+  host: rcn.lakehouse.local
+  annotations: {}
   tls:
     enabled: true
-    secretName: RCN-tls
+    secretName: rcn-tls
     # If using cert-manager, set the ClusterIssuer here. Leave empty
     # if you provision the TLS Secret manually.
-    certManagerClusterIssuer: letsencrypt-prod
+    certManagerClusterIssuer: ""

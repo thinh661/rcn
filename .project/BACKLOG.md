@@ -47,10 +47,10 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 
 | # | Feature | Type | Trạng thái | Assigned |
 |---|---------|------|:----------:|----------|
-| 2.1 | Frontend Batch Jobs UI | ⚡ Feature | 🔵 Backlog | - |
-| 2.2 | Scheduled Jobs API (Cron scheduling) | ⚡ Feature | 🔵 Backlog | - |
-| 2.3 | Job Templates | ⚡ Feature | 🔵 Backlog | - |
-| 2.4 | Job Notifications (Webhook) | ⚡ Feature | 🔵 Backlog | - |
+| 2.1 | Frontend Batch Jobs UI | ⚡ Feature | 🟢 Done | agy |
+| 2.2 | Scheduled Jobs API (Cron scheduling) | ⚡ Feature | 🟢 Done (code) | agy |
+| 2.3 | Job Templates | ⚡ Feature | 🟡 In Progress | agy |
+| 2.4 | Job Notifications (Webhook) | ⚡ Feature | 🟢 Done (code) | agy |
 | 2.5 | Batch Dashboard / Monitoring | ⚡ Feature | 🔵 Backlog | - |
 
 ---

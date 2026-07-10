@@ -31,11 +31,13 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 
 | # | Feature | Type | Trạng thái | Assigned |
 |---|---------|------|:----------:|----------|
-| 1.1 | Spark Operator + SparkApplication CRD | 🏗️ Kiến trúc | 🔵 Ready | agy |
-| 1.2 | Spark History Server (MinIO event log) | ⚡ Feature | 🔵 Ready | agy |
-| 1.3 | Batch Jobs API (submit/list/stop) | ⚡ Feature | 🔵 Backlog | - |
+| # | Feature | Type | Trạng thái | Assigned |
+|---|---------|------|:----------:|----------|
+| 1.1 | Spark Operator + SparkApplication CRD | 🏗️ Kiến trúc | 🟢 Done | agy |
+| 1.2 | Spark History Server (MinIO event log) | ⚡ Feature | 🟢 Done | agy |
+| 1.3 | Batch Jobs API (submit/list/stop) | ⚡ Feature | 🟢 Done (code) | agy |
 | 1.4 | Resource Presets mở rộng | ⚡ Feature | 🔵 Backlog | - |
-| 1.5 | Iceberg catalog integration | ⚡ Feature | 🔵 Backlog | - |
+| 1.5 | Iceberg catalog integration | ⚡ Feature | 🟢 Done (kernel image) | agy |
 | 1.6 | Fix CORS security | 🐛 Bug | 🔵 Backlog | - |
 | 1.7 | CI/CD pipeline (GitHub Actions) | 🔧 Infra | 🔵 Backlog | - |
 

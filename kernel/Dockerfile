@@ -39,6 +39,13 @@ RUN python3 -c "from pyspark.sql import SparkSession; SparkSession.builder.maste
  && coursier fetch "io.dataflint:spark_2.12:${DATAFLINT_VERSION}" > /dev/null \
  && echo "pre-warmed DataFlint ${DATAFLINT_VERSION} (ivy + coursier)"
 
+# Apache Iceberg Spark runtime jar — enables Iceberg table format support
+# (Hadoop catalog, warehouse on MinIO S3). Keep version in sync with the
+# iceberg config in spark-defaults.conf.
+ENV ICEBERG_VERSION=1.6.1
+RUN wget -q -P $PYSPARK_JARS \
+    https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/${ICEBERG_VERSION}/iceberg-spark-runtime-3.5_2.12-${ICEBERG_VERSION}.jar
+
 # Spark S3 config (STS credentials injected via env vars at pod creation)
 ENV SPARK_CONF_DIR=/home/exam/spark-conf
 RUN mkdir -p $SPARK_CONF_DIR

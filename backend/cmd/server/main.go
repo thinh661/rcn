@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -47,6 +48,26 @@ func main() {
 
 	storageHandler := handlers.NewStorageHandler(cfg)
 	storageHandler.EnsureWorkspaceBucket()
+
+	// Spark Jobs Service — manages SparkApplication CRDs via Spark Operator.
+	sparkJobSvc, err := services.NewSparkJobService(cfg.KernelPodNamespace)
+	if err != nil {
+		log.Warn().Err(err).Msg("SparkJobService init failed — batch jobs API disabled")
+	}
+	var sparkJobHandler *handlers.SparkJobHandler
+	if sparkJobSvc != nil {
+		sparkJobHandler = handlers.NewSparkJobHandler(sparkJobSvc)
+		// Start background status sync for active jobs every 30s.
+		go func() {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+			for range ticker.C {
+				ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+				sparkJobSvc.SyncAllStatuses(ctx)
+				cancel()
+			}
+		}()
+	}
 
 	// MinIO IAM: per-user accounts + scoped policies for true kernel isolation.
 	// Nil if MinIO not configured — auth + kernel pods then fall back to no creds
@@ -316,6 +337,19 @@ func main() {
 		v1.GET("/connectors/:id", middleware.RequireAdmin(cfg), authHandler.GetConnector)
 		v1.PUT("/connectors/:id", middleware.RequireAdmin(cfg), authHandler.UpdateConnector)
 		v1.DELETE("/connectors/:id", middleware.RequireAdmin(cfg), authHandler.DeleteConnector)
+
+		// Spark batch jobs API
+		if sparkJobHandler != nil {
+			sparkJobs := v1.Group("/spark")
+			sparkJobs.Use(middleware.RequireAdmin(cfg))
+			{
+				sparkJobs.GET("/jobs", sparkJobHandler.ListJobs)
+				sparkJobs.POST("/jobs", sparkJobHandler.SubmitJob)
+				sparkJobs.GET("/jobs/:id", sparkJobHandler.GetJob)
+				sparkJobs.DELETE("/jobs/:id", sparkJobHandler.StopJob)
+				sparkJobs.GET("/jobs/:id/logs", sparkJobHandler.GetJobLogs)
+			}
+		}
 	}
 
 	addr := ":" + cfg.ServicePort

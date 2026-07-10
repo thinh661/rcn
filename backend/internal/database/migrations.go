@@ -141,6 +141,29 @@ func MigrateAndSeed(cfg *config.Config) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_notebook_kernels_user ON notebook_kernels(user_id)`,
 
+			// Spark batch jobs table — persisted metadata for SparkApplication CRDs.
+		`CREATE TABLE IF NOT EXISTS spark_jobs (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES admins(id),
+			name VARCHAR(255) NOT NULL,
+			type VARCHAR(20) NOT NULL DEFAULT 'Scala',
+			main_class TEXT NOT NULL DEFAULT '',
+			main_app_file TEXT NOT NULL,
+			arguments TEXT[] DEFAULT '{}',
+			spark_conf JSONB DEFAULT '{}',
+			driver_cpu VARCHAR(20) DEFAULT '1',
+			driver_memory VARCHAR(20) DEFAULT '2g',
+			executor_cpu VARCHAR(20) DEFAULT '1',
+			executor_memory VARCHAR(20) DEFAULT '2g',
+			executor_instances INTEGER DEFAULT 1,
+			status VARCHAR(50) DEFAULT 'SUBMITTED',
+			spark_application_name VARCHAR(255) DEFAULT '',
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_spark_jobs_user_id ON spark_jobs(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_spark_jobs_status ON spark_jobs(status)`,
+
 		// Backfill: OAuth admins originally got username = full email. Storage
 		// now uses username as a path segment (users/<username>/...), and "@" in
 		// S3 keys triggers SigV4 SignatureDoesNotMatch under some clients. Rewrite

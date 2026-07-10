@@ -19,7 +19,7 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 | Phase | Mục tiêu | Thời gian | Trạng thái |
 |-------|----------|-----------|:----------:|
 | **Phase 1** | Nền tảng mở rộng | 2-3 tuần | 🟢 Done |
-| **Phase 2** | Batch & Scheduling | 3-4 tuần | 🟡 In Progress |
+| **Phase 2** | Batch & Scheduling | 3-4 tuần | 🟢 Done |
 | **Phase 3** | Enterprise Features | 4-5 tuần | 🔵 Backlog |
 | **Phase 4** | Monitoring & Operations | 3-4 tuần | 🔵 Backlog |
 
@@ -48,9 +48,9 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 | # | Feature | Type | Trạng thái | Assigned |
 |---|---------|------|:----------:|----------|
 | 2.1 | Frontend Batch Jobs UI | ⚡ Feature | 🟢 Done | agy |
-| 2.2 | Scheduled Jobs API (Cron scheduling) | ⚡ Feature | 🟢 Done (code) | agy |
-| 2.3 | Job Templates | ⚡ Feature | 🟡 In Progress | agy |
-| 2.4 | Job Notifications (Webhook) | ⚡ Feature | 🟢 Done (code) | agy |
+| 2.2 | Scheduled Jobs API (Cron scheduling) | ⚡ Feature | 🟢 Done | agy |
+| 2.3 | Job Templates | ⚡ Feature | 🟢 Done | agy |
+| 2.4 | Job Notifications (Webhook) | ⚡ Feature | 🟢 Done | agy |
 | 2.5 | Batch Dashboard / Monitoring | ⚡ Feature | 🔵 Backlog | - |
 
 ---

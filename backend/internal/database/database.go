@@ -90,3 +90,9 @@ func Close() {
 		log.Info().Msg("database connection closed")
 	}
 }
+
+// SeedResourcePresetsFromEnv inserts resource presets from the config into the DB
+// if the resource_presets table is empty. This is a no-op stub for Phase 2.
+func SeedResourcePresetsFromEnv(cfg *config.Config) {
+	log.Info().Msg("SeedResourcePresetsFromEnv: stub — resource presets remain in-memory")
+}

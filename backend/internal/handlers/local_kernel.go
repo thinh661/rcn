@@ -1145,3 +1145,9 @@ func (h *LocalKernelHandler) ProxyHTTP(c *gin.Context) {
 	c.Writer.WriteHeader(resp.StatusCode)
 	io.Copy(c.Writer, resp.Body)
 }
+
+// UpdateResourcePresetsFromDB refreshes resource presets from the database.
+// This is a no-op stub for Phase 2 — presets remain loaded from config.
+func (h *LocalKernelHandler) UpdateResourcePresetsFromDB() {
+	log.Info().Msg("UpdateResourcePresetsFromDB: stub — resource presets remain in-memory")
+}

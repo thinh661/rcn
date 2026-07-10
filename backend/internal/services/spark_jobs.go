@@ -58,6 +58,7 @@ type SparkJob struct {
 	ExecutorInstances    int32             `json:"executor_instances"`
 	Status               SparkJobStatus    `json:"status"`
 	SparkApplicationName string            `json:"spark_application_name"`
+	WebhookURL           string            `json:"webhook_url"`
 	CreatedAt            time.Time         `json:"created_at"`
 	UpdatedAt            time.Time         `json:"updated_at"`
 }
@@ -75,6 +76,7 @@ type SubmitJobRequest struct {
 	ExecutorCPU       string            `json:"executor_cpu"`
 	ExecutorMemory    string            `json:"executor_memory"`
 	ExecutorInstances int32             `json:"executor_instances"`
+	WebhookURL        string            `json:"webhook_url"`
 }
 
 // SparkJobService manages Spark batch jobs via the Spark Operator CRD.
@@ -136,6 +138,10 @@ func (s *SparkJobService) Submit(ctx context.Context, req *SubmitJobRequest, use
 	// Build SparkApplication CRD object.
 	app := s.buildSparkApplication(appName, jobType, req, sparkConf)
 
+	// Inject notification webhook so the Spark Operator calls back on state changes.
+	notificationURL := fmt.Sprintf("http://backend:10000/api/v1/spark/callback?job_id=%s", jobID)
+	_ = unstructured.SetNestedField(app.Object, notificationURL, "spec", "notification", "api", "url")
+
 	// Create the CRD in K8s.
 	created, err := s.dynamicClient.Resource(sparkAppGVR).Namespace(s.namespace).
 		Create(ctx, app, metav1.CreateOptions{})
@@ -181,19 +187,22 @@ func (s *SparkJobService) Submit(ctx context.Context, req *SubmitJobRequest, use
 		ExecutorInstances:    execInst,
 		Status:               JobSubmitted,
 		SparkApplicationName: appName,
+		WebhookURL:           webhookURL,
 		CreatedAt:            created.GetCreationTimestamp().Time,
 	}
+
+	webhookURL := req.WebhookURL
 
 	_, err = db.Exec(`
 		INSERT INTO spark_jobs (
 			id, user_id, name, type, main_class, main_app_file, arguments,
 			spark_conf, driver_cpu, driver_memory, executor_cpu, executor_memory,
-			executor_instances, status, spark_application_name
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+			executor_instances, status, spark_application_name, webhook_url
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
 		job.ID, job.UserID, job.Name, job.Type, job.MainClass, job.MainAppFile,
 		job.Arguments, toJSONB(job.SparkConf), job.DriverCPU, job.DriverMemory,
 		job.ExecutorCPU, job.ExecutorMemory, job.ExecutorInstances,
-		string(job.Status), job.SparkApplicationName,
+		string(job.Status), job.SparkApplicationName, webhookURL,
 	)
 	if err != nil {
 		log.Warn().Err(err).Str("job_id", jobID).Msg("failed to persist spark_job to DB")
@@ -209,7 +218,7 @@ func (s *SparkJobService) List(ctx context.Context, userID string, showAll bool)
 
 	query := `SELECT id, user_id, name, type, main_class, main_app_file, arguments,
 		spark_conf, driver_cpu, driver_memory, executor_cpu, executor_memory,
-		executor_instances, status, spark_application_name, created_at, updated_at
+		executor_instances, status, spark_application_name, webhook_url, created_at, updated_at
 		FROM spark_jobs`
 	var args []interface{}
 
@@ -236,7 +245,7 @@ func (s *SparkJobService) List(ctx context.Context, userID string, showAll bool)
 			&argsJSON, &confJSON,
 			&j.DriverCPU, &j.DriverMemory, &j.ExecutorCPU, &j.ExecutorMemory,
 			&j.ExecutorInstances, (*string)(&j.Status), &j.SparkApplicationName,
-			&j.CreatedAt, &j.UpdatedAt,
+			&j.WebhookURL, &j.CreatedAt, &j.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan spark_job: %w", err)
 		}
@@ -268,14 +277,14 @@ func (s *SparkJobService) Get(ctx context.Context, id string) (*SparkJob, error)
 	err := db.QueryRow(`
 		SELECT id, user_id, name, type, main_class, main_app_file, arguments,
 			spark_conf, driver_cpu, driver_memory, executor_cpu, executor_memory,
-			executor_instances, status, spark_application_name, created_at, updated_at
+			executor_instances, status, spark_application_name, webhook_url, created_at, updated_at
 		FROM spark_jobs WHERE id = $1`, id,
 	).Scan(
 		&j.ID, &j.UserID, &j.Name, &j.Type, &j.MainClass, &j.MainAppFile,
 		&argsJSON, &confJSON,
 		&j.DriverCPU, &j.DriverMemory, &j.ExecutorCPU, &j.ExecutorMemory,
 		&j.ExecutorInstances, (*string)(&j.Status), &j.SparkApplicationName,
-		&j.CreatedAt, &j.UpdatedAt,
+		&j.WebhookURL, &j.CreatedAt, &j.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get spark_job %s: %w", id, err)
@@ -317,6 +326,20 @@ func (s *SparkJobService) Stop(ctx context.Context, id string) error {
 
 	_, err = db.Exec(`UPDATE spark_jobs SET status = $1, updated_at = NOW() WHERE id = $2`,
 		string(JobStopped), id)
+	return err
+}
+
+// SetWebhook updates the webhook URL for a given job.
+func (s *SparkJobService) SetWebhook(ctx context.Context, id string, webhookURL string) error {
+	db := database.GetDB()
+	_, err := db.Exec(`UPDATE spark_jobs SET webhook_url = $1, updated_at = NOW() WHERE id = $2`, webhookURL, id)
+	return err
+}
+
+// UpdateStatus updates the job status in the database.
+func (s *SparkJobService) UpdateStatus(ctx context.Context, id string, status SparkJobStatus) error {
+	db := database.GetDB()
+	_, err := db.Exec(`UPDATE spark_jobs SET status = $1, updated_at = NOW() WHERE id = $2`, string(status), id)
 	return err
 }
 

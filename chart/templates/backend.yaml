@@ -35,6 +35,10 @@ rules:
   - apiGroups: ["sparkoperator.k8s.io"]
     resources: ["sparkapplications"]
     verbs: ["get", "list", "watch", "create", "delete", "patch"]
+  # Spark Operator CRD — scheduled batch jobs via ScheduledSparkApplication
+  - apiGroups: ["sparkoperator.k8s.io"]
+    resources: ["scheduledsparkapplications"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

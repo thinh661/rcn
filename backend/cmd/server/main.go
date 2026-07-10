@@ -46,6 +46,9 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to run migrations")
 	}
 
+	// Seed resource presets from env into DB if the table is empty.
+	database.SeedResourcePresetsFromEnv(cfg)
+
 	storageHandler := handlers.NewStorageHandler(cfg)
 	storageHandler.EnsureWorkspaceBucket()
 
@@ -55,6 +58,7 @@ func main() {
 		log.Warn().Err(err).Msg("SparkJobService init failed — batch jobs API disabled")
 	}
 	var sparkJobHandler *handlers.SparkJobHandler
+	var sparkScheduledJobHandler *handlers.SparkScheduledJobHandler
 	if sparkJobSvc != nil {
 		sparkJobHandler = handlers.NewSparkJobHandler(sparkJobSvc)
 		// Start background status sync for active jobs every 30s.
@@ -67,6 +71,15 @@ func main() {
 				cancel()
 			}
 		}()
+	}
+
+	// Spark Scheduled Jobs Service — manages ScheduledSparkApplication CRDs via Spark Operator.
+	sparkScheduledSvc, err := services.NewSparkScheduledJobService(cfg.KernelPodNamespace)
+	if err != nil {
+		log.Warn().Err(err).Msg("SparkScheduledJobService init failed — scheduled jobs API disabled")
+	}
+	if sparkScheduledSvc != nil {
+		sparkScheduledJobHandler = handlers.NewSparkScheduledJobHandler(sparkScheduledSvc)
 	}
 
 	// MinIO IAM: per-user accounts + scoped policies for true kernel isolation.
@@ -169,7 +182,11 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to initialize kernel gateway")
 	}
 	localKernelHandler := handlers.NewLocalKernelHandler(cfg, kernelGateway)
+	localKernelHandler.UpdateResourcePresetsFromDB() // load DB presets into memory
 	handlers.LoadKernelMapFromDB()
+
+	// Admin CRUD for resource presets.
+	resourcePresetsAdminHandler := handlers.NewResourcePresetsAdminHandler(localKernelHandler)
 	notebookHandler := handlers.NewNotebookHandler()
 	userHandler := handlers.NewUserManagementHandler()
 	allowedDomainHandler := handlers.NewAllowedDomainHandler()
@@ -254,6 +271,11 @@ func main() {
 			admin.POST("/allowed-domains", middleware.RequireSuperAdmin(), allowedDomainHandler.Create)
 			admin.PATCH("/allowed-domains/:id", middleware.RequireSuperAdmin(), allowedDomainHandler.Update)
 			admin.DELETE("/allowed-domains/:id", middleware.RequireSuperAdmin(), allowedDomainHandler.Delete)
+
+			// Resource presets admin CRUD — superadmin only (changes affect all users)
+			admin.GET("/resource-presets", middleware.RequireSuperAdmin(), resourcePresetsAdminHandler.List)
+			admin.POST("/resource-presets", middleware.RequireSuperAdmin(), resourcePresetsAdminHandler.Upsert)
+			admin.DELETE("/resource-presets/:id", middleware.RequireSuperAdmin(), resourcePresetsAdminHandler.Delete)
 		}
 
 		// Notebooks — admin only in this lite build
@@ -348,6 +370,16 @@ func main() {
 				sparkJobs.GET("/jobs/:id", sparkJobHandler.GetJob)
 				sparkJobs.DELETE("/jobs/:id", sparkJobHandler.StopJob)
 				sparkJobs.GET("/jobs/:id/logs", sparkJobHandler.GetJobLogs)
+
+				// Scheduled Spark jobs API
+				if sparkScheduledJobHandler != nil {
+					sparkJobs.GET("/scheduled-jobs", sparkScheduledJobHandler.ListScheduledJobs)
+					sparkJobs.POST("/scheduled-jobs", sparkScheduledJobHandler.CreateScheduledJob)
+					sparkJobs.GET("/scheduled-jobs/:id", sparkScheduledJobHandler.GetScheduledJob)
+					sparkJobs.PUT("/scheduled-jobs/:id", sparkScheduledJobHandler.UpdateScheduledJob)
+					sparkJobs.DELETE("/scheduled-jobs/:id", sparkScheduledJobHandler.DeleteScheduledJob)
+					sparkJobs.PATCH("/scheduled-jobs/:id/toggle", sparkScheduledJobHandler.ToggleScheduledJob)
+				}
 			}
 		}
 	}

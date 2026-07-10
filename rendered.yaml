@@ -123,6 +123,10 @@ rules:
   - apiGroups: ["sparkoperator.k8s.io"]
     resources: ["sparkapplications"]
     verbs: ["get", "list", "watch", "create", "delete", "patch"]
+  # Spark Operator CRD — scheduled batch jobs via ScheduledSparkApplication
+  - apiGroups: ["sparkoperator.k8s.io"]
+    resources: ["scheduledsparkapplications"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
 ---
 # Source: rcn/templates/backend.yaml
 apiVersion: rbac.authorization.k8s.io/v1

@@ -16,6 +16,7 @@ const StoragePage = React.lazy(() => import('./components/Admin/StoragePage'));
 const UserManagement = React.lazy(() => import('./components/Admin/UserManagement'));
 const NotebookListPage = React.lazy(() => import('./components/Notebooks/NotebookListPage'));
 const NotebookPage = React.lazy(() => import('./components/Notebooks/NotebookPage'));
+const SparkJobsPage = React.lazy(() => import('./components/SparkJobs/SparkJobsPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +67,7 @@ const AdminLayout: React.FC = () => {
                 <Route path="/admin/users" element={<UserManagement />} />
                 <Route path="/notebooks" element={<NotebookListPage />} />
                 <Route path="/notebooks/:id" element={<NotebookPage />} />
+                <Route path="/spark-jobs" element={<SparkJobsPage />} />
                 <Route path="*" element={<Navigate to="/notebooks" replace />} />
               </Routes>
             </React.Suspense>

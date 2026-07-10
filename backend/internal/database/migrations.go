@@ -163,6 +163,35 @@ func MigrateAndSeed(cfg *config.Config) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_spark_jobs_user_id ON spark_jobs(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_spark_jobs_status ON spark_jobs(status)`,
+		`ALTER TABLE spark_jobs ADD COLUMN IF NOT EXISTS webhook_url TEXT NOT NULL DEFAULT ''`,
+
+		// Admin-managed resource presets for kernel pod sizing (issue #41, k8s_per_user).
+		// id is the preset key (e.g. "small", "medium"), is_default controls which
+		// one is pre-selected in the UI. Managed via the admin CRUD API.
+		`CREATE TABLE IF NOT EXISTS resource_presets (
+			id VARCHAR(64) PRIMARY KEY,
+			label VARCHAR(128) NOT NULL DEFAULT '',
+			cpu VARCHAR(20) NOT NULL,
+			memory VARCHAR(20) NOT NULL,
+			is_default BOOLEAN NOT NULL DEFAULT false,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+		)`,
+
+		// Spark scheduled jobs table — persisted metadata for ScheduledSparkApplication CRDs.
+		`CREATE TABLE IF NOT EXISTS spark_scheduled_jobs (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES admins(id),
+			name VARCHAR(255) NOT NULL,
+			schedule VARCHAR(100) NOT NULL,
+			template JSONB NOT NULL DEFAULT '{}',
+			enabled BOOLEAN NOT NULL DEFAULT true,
+			status VARCHAR(50) DEFAULT 'ACTIVE',
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_spark_scheduled_jobs_user_id ON spark_scheduled_jobs(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_spark_scheduled_jobs_enabled ON spark_scheduled_jobs(enabled)`,
 
 		// Backfill: OAuth admins originally got username = full email. Storage
 		// now uses username as a path segment (users/<username>/...), and "@" in

@@ -18,8 +18,8 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 
 | Phase | Mục tiêu | Thời gian | Trạng thái |
 |-------|----------|-----------|:----------:|
-| **Phase 1** | Nền tảng mở rộng | 2-3 tuần | 🟡 In Progress |
-| **Phase 2** | Batch & Scheduling | 3-4 tuần | 🔵 Backlog |
+| **Phase 1** | Nền tảng mở rộng | 2-3 tuần | 🟢 Done |
+| **Phase 2** | Batch & Scheduling | 3-4 tuần | 🟡 In Progress |
 | **Phase 3** | Enterprise Features | 4-5 tuần | 🔵 Backlog |
 | **Phase 4** | Monitoring & Operations | 3-4 tuần | 🔵 Backlog |
 
@@ -31,15 +31,27 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 
 | # | Feature | Type | Trạng thái | Assigned |
 |---|---------|------|:----------:|----------|
-| # | Feature | Type | Trạng thái | Assigned |
-|---|---------|------|:----------:|----------|
 | 1.1 | Spark Operator + SparkApplication CRD | 🏗️ Kiến trúc | 🟢 Done | agy |
 | 1.2 | Spark History Server (MinIO event log) | ⚡ Feature | 🟢 Done | agy |
-| 1.3 | Batch Jobs API (submit/list/stop) | ⚡ Feature | 🟢 Done (code) | agy |
-| 1.4 | Resource Presets mở rộng | ⚡ Feature | 🔵 Backlog | - |
-| 1.5 | Iceberg catalog integration | ⚡ Feature | 🟢 Done (kernel image) | agy |
-| 1.6 | Fix CORS security | 🐛 Bug | 🔵 Backlog | - |
-| 1.7 | CI/CD pipeline (GitHub Actions) | 🔧 Infra | 🔵 Backlog | - |
+| 1.3 | Batch Jobs API (submit/list/stop) | ⚡ Feature | 🟢 Done | agy |
+| 1.4 | Resource Presets mở rộng | ⚡ Feature | 🟢 Done | agy |
+| 1.5 | Iceberg catalog integration | ⚡ Feature | 🟢 Done | agy |
+| 1.6 | Fix CORS security | 🐛 Bug | 🟢 Done | agy |
+| 1.7 | CI/CD pipeline (GitHub Actions) | 🔧 Infra | 🟢 Done | agy |
+
+---
+
+## 🚀 Phase 2: Batch & Scheduling
+
+**Mục tiêu:** Batch job UI, scheduling, templates, monitoring
+
+| # | Feature | Type | Trạng thái | Assigned |
+|---|---------|------|:----------:|----------|
+| 2.1 | Frontend Batch Jobs UI | ⚡ Feature | 🔵 Backlog | - |
+| 2.2 | Scheduled Jobs API (Cron scheduling) | ⚡ Feature | 🔵 Backlog | - |
+| 2.3 | Job Templates | ⚡ Feature | 🔵 Backlog | - |
+| 2.4 | Job Notifications (Webhook) | ⚡ Feature | 🔵 Backlog | - |
+| 2.5 | Batch Dashboard / Monitoring | ⚡ Feature | 🔵 Backlog | - |
 
 ---
 

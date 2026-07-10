@@ -8,6 +8,7 @@ import {
   Settings,
   Users,
   HardDrive,
+  Sparkles,
 } from 'lucide-react';
 import authService from '@/services/authService';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -69,6 +70,19 @@ export function Sidebar({ collapsed, onCollapse }: SidebarProps) {
           >
             <NotebookIcon className="size-4" />
             {!collapsed && <span className="flex-1 text-left">Notebooks</span>}
+          </button>
+
+          <button
+            onClick={() => navigate('/spark-jobs')}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+              "hover:bg-accent hover:text-accent-foreground",
+              isActive('/spark-jobs') && "bg-primary text-primary-foreground",
+              collapsed && "justify-center"
+            )}
+          >
+            <Sparkles className="size-4" />
+            {!collapsed && <span className="flex-1 text-left">Spark Jobs</span>}
           </button>
 
           <button

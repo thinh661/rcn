@@ -34,6 +34,8 @@ type LocalKernelHandler struct {
 	// Per-session resource presets (issue #41, k8s + docker per-user modes).
 	// An empty preset list means the feature is off: Connect ignores any
 	// resources field and the presets endpoint reports enabled=false.
+	// Protected by presetsMu so the admin CRUD handler can update these at runtime.
+	presetsMu             sync.RWMutex
 	resourcePresets       []config.ResourcePreset
 	resourceDefaultPreset string
 	resourceAllowCustom   bool
@@ -389,12 +391,19 @@ type connectResources struct {
 //   - (spec, nil): a valid preset or custom size.
 //   - (nil, err): client sent something invalid → handler returns 400.
 func (h *LocalKernelHandler) resolveResources(r *connectResources) (*services.ResourceSpec, error) {
-	if len(h.resourcePresets) == 0 || r == nil {
+	h.presetsMu.RLock()
+	presets := h.resourcePresets
+	allowCustom := h.resourceAllowCustom
+	customMaxCPU := h.resourceCustomMaxCPU
+	customMaxMem := h.resourceCustomMaxMem
+	h.presetsMu.RUnlock()
+
+	if len(presets) == 0 || r == nil {
 		return nil, nil
 	}
 
 	if r.Preset != "" {
-		for _, p := range h.resourcePresets {
+		for _, p := range presets {
 			if p.ID == r.Preset {
 				return &services.ResourceSpec{CPU: p.CPU, Memory: p.Memory}, nil
 			}
@@ -403,7 +412,7 @@ func (h *LocalKernelHandler) resolveResources(r *connectResources) (*services.Re
 	}
 
 	if r.Custom != nil {
-		if !h.resourceAllowCustom {
+		if !allowCustom {
 			return nil, fmt.Errorf("custom resources are not allowed")
 		}
 		cpu, mem := strings.TrimSpace(r.Custom.CPU), strings.TrimSpace(r.Custom.Memory)
@@ -430,14 +439,14 @@ func (h *LocalKernelHandler) resolveResources(r *connectResources) (*services.Re
 		if memQ.Value() < 128<<20 {
 			return nil, fmt.Errorf("memory %s is below the 128Mi minimum (did you mean %sGi?)", mem, mem)
 		}
-		if h.resourceCustomMaxCPU != "" {
-			if maxQ, err := resource.ParseQuantity(h.resourceCustomMaxCPU); err == nil && cpuQ.Cmp(maxQ) > 0 {
-				return nil, fmt.Errorf("cpu %s exceeds the allowed max of %s", cpu, h.resourceCustomMaxCPU)
+		if customMaxCPU != "" {
+			if maxQ, err := resource.ParseQuantity(customMaxCPU); err == nil && cpuQ.Cmp(maxQ) > 0 {
+				return nil, fmt.Errorf("cpu %s exceeds the allowed max of %s", cpu, customMaxCPU)
 			}
 		}
-		if h.resourceCustomMaxMem != "" {
-			if maxQ, err := resource.ParseQuantity(h.resourceCustomMaxMem); err == nil && memQ.Cmp(maxQ) > 0 {
-				return nil, fmt.Errorf("memory %s exceeds the allowed max of %s", mem, h.resourceCustomMaxMem)
+		if customMaxMem != "" {
+			if maxQ, err := resource.ParseQuantity(customMaxMem); err == nil && memQ.Cmp(maxQ) > 0 {
+				return nil, fmt.Errorf("memory %s exceeds the allowed max of %s", mem, customMaxMem)
 			}
 		}
 		return &services.ResourceSpec{CPU: cpu, Memory: mem}, nil

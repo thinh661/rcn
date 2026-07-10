@@ -441,7 +441,8 @@ func (s *SparkJobService) buildSparkApplication(name, jobType string, req *Submi
 
 	// Driver spec
 	_ = unstructured.SetNestedField(app.Object, driverCPU, "spec", "driver", "cores")
-	_ = unstructured.SetNestedField(app.Object, resource.MustParse(driverCPU).String(), "spec", "driver", "coreLimit")
+	coreLimitQty := resource.MustParse(driverCPU)
+	_ = unstructured.SetNestedField(app.Object, coreLimitQty.String(), "spec", "driver", "coreLimit")
 	_ = unstructured.SetNestedField(app.Object, driverMem, "spec", "driver", "memory")
 	_ = unstructured.SetNestedField(app.Object, "spark", "spec", "driver", "serviceAccount")
 

@@ -360,6 +360,11 @@ func main() {
 		v1.PUT("/connectors/:id", middleware.RequireAdmin(cfg), authHandler.UpdateConnector)
 		v1.DELETE("/connectors/:id", middleware.RequireAdmin(cfg), authHandler.DeleteConnector)
 
+		// Spark Operator callback — no auth required (in-cluster webhook).
+		if sparkJobHandler != nil {
+			v1.POST("/spark/callback", sparkJobHandler.Callback)
+		}
+
 		// Spark batch jobs API
 		if sparkJobHandler != nil {
 			sparkJobs := v1.Group("/spark")
@@ -370,6 +375,7 @@ func main() {
 				sparkJobs.GET("/jobs/:id", sparkJobHandler.GetJob)
 				sparkJobs.DELETE("/jobs/:id", sparkJobHandler.StopJob)
 				sparkJobs.GET("/jobs/:id/logs", sparkJobHandler.GetJobLogs)
+				sparkJobs.POST("/jobs/:id/webhook", sparkJobHandler.SetWebhook)
 
 				// Scheduled Spark jobs API
 				if sparkScheduledJobHandler != nil {

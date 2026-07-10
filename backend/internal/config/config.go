@@ -174,7 +174,7 @@ func Load() *Config {
 		KernelResourceCustomMaxCPU:  getEnv("KERNEL_RESOURCE_CUSTOM_MAX_CPU", ""),
 		KernelResourceCustomMaxMem:  getEnv("KERNEL_RESOURCE_CUSTOM_MAX_MEMORY", ""),
 
-		CORSOrigins: strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ","),
+		CORSOrigins: splitCORSOrigins(getEnv("CORS_ORIGINS", "http://localhost:3000")),
 	}
 }
 
@@ -230,6 +230,22 @@ func parseResourcePresets(raw string) []ResourcePreset {
 			p.Label = p.ID
 		}
 		out = append(out, p)
+	}
+	return out
+}
+
+// splitCORSOrigins splits a comma-separated list of CORS origins, strips
+// whitespace from each token, and skips empty tokens. This prevents subtle
+// bugs from config values like "https://a.com, https://b.com" or trailing
+// commas.
+func splitCORSOrigins(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			out = append(out, trimmed)
+		}
 	}
 	return out
 }

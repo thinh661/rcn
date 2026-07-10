@@ -184,7 +184,7 @@ backend:
     requests: { cpu: 200m, memory: 256Mi }
     limits:   { cpu: 2000m, memory: 1Gi }
   cors:
-    origins: "*"          # tighten in production to your real domain
+    origins: "https://rcn.lakehouse.local"          # tighten in production to your real domain
   logLevel: info
 
 # ─────────────────────────────────────────────────────────────

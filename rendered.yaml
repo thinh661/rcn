@@ -67,7 +67,7 @@ data:
   KERNEL_POD_IMAGE: "ghcr.io/sparklabx/kernel:latest"
   KERNEL_POD_IDLE_MINUTES: "30"
   KERNEL_POD_MAX_TOTAL: "50"
-  CORS_ORIGINS: "*"
+  CORS_ORIGINS: "https://rcn.lakehouse.local"
   LOG_LEVEL: "info"
   ENVIRONMENT: "production"
   SERVICE_PORT: "10000"

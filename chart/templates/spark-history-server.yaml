@@ -1,0 +1,104 @@
+{{- if .Values.sparkHistoryServer.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-history-server
+  labels:
+    {{- include "RCN.labels" . | nindent 4 }}
+    component: spark-history-server
+spec:
+  ports:
+    - port: 18080
+      targetPort: 18080
+      name: spark-history-server
+  selector:
+    {{- include "RCN.selectorLabels" . | nindent 4 }}
+    component: spark-history-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history-server
+  labels:
+    {{- include "RCN.labels" . | nindent 4 }}
+    component: spark-history-server
+spec:
+  replicas: {{ .Values.sparkHistoryServer.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "RCN.selectorLabels" . | nindent 6 }}
+      component: spark-history-server
+  template:
+    metadata:
+      labels:
+        {{- include "RCN.selectorLabels" . | nindent 8 }}
+        component: spark-history-server
+    spec:
+      initContainers:
+        - name: copy-s3a-jars
+          image: "{{ .Values.image.kernel.repository }}:{{ .Values.image.kernel.tag }}"
+          imagePullPolicy: {{ .Values.image.kernel.pullPolicy | default "IfNotPresent" }}
+          command:
+            - sh
+            - -c
+            - |
+              cp /usr/local/lib/python3.11/dist-packages/pyspark/jars/hadoop-aws-3.3.4.jar /shared-jars/hadoop-aws-3.3.4.jar
+              cp /usr/local/lib/python3.11/dist-packages/pyspark/jars/aws-java-sdk-bundle-1.12.262.jar /shared-jars/aws-java-sdk-bundle-1.12.262.jar
+          volumeMounts:
+            - name: shared-jars
+              mountPath: /shared-jars
+      containers:
+        - name: spark-history-server
+          image: "{{ .Values.sparkHistoryServer.image.repository }}:{{ .Values.sparkHistoryServer.image.tag }}"
+          imagePullPolicy: {{ .Values.sparkHistoryServer.image.pullPolicy | default "IfNotPresent" }}
+          command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.history.HistoryServer"]
+          ports:
+            - containerPort: 18080
+              name: spark-history
+          env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "RCN.secretName" . }}
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "RCN.secretName" . }}
+                  key: MINIO_SECRET_KEY
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "RCN.fullname" . }}-config
+                  key: MINIO_ENDPOINT
+            - name: SPARK_HISTORY_OPTS
+              value: >-
+                -Dspark.history.fs.logDirectory=s3a://workspace/event-logs/
+                -Dspark.hadoop.fs.s3a.endpoint=$(MINIO_ENDPOINT)
+                -Dspark.hadoop.fs.s3a.access.key=$(MINIO_ACCESS_KEY)
+                -Dspark.hadoop.fs.s3a.secret.key=$(MINIO_SECRET_KEY)
+                -Dspark.hadoop.fs.s3a.path.style.access=true
+                -Dspark.history.ui.port=18080
+          volumeMounts:
+            - name: shared-jars
+              mountPath: /opt/spark/jars/hadoop-aws-3.3.4.jar
+              subPath: hadoop-aws-3.3.4.jar
+            - name: shared-jars
+              mountPath: /opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar
+              subPath: aws-java-sdk-bundle-1.12.262.jar
+          resources:
+            {{- toYaml .Values.sparkHistoryServer.resources | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: 18080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 18080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: shared-jars
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,734 @@
+---
+# Source: rcn/templates/backend.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rcn-backend
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: backend
+---
+# Source: rcn/templates/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rcn-secrets
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+stringData:
+  JWT_SECRET_KEY: "mY48JAS66uzRMesKNmwRcz82IpzlMtMfW7HQG3AirVxk17B7O/dQF9PG0JgOyzW3"
+  SEED_ADMIN_USERNAME: "admin"
+  SEED_ADMIN_EMAIL: "admin@example.com"
+  SEED_ADMIN_PASSWORD: "RCNAdminPassword2026!"
+  MINIO_ROOT_USER: "minioadmin"
+  MINIO_ROOT_PASSWORD: "TWqGwiSUaRH7LJQUkNbPelAdlz0AH+iH"
+  
+  MINIO_ACCESS_KEY: "minioadmin"
+  MINIO_SECRET_KEY: "TWqGwiSUaRH7LJQUkNbPelAdlz0AH+iH"
+  GOOGLE_CLIENT_ID: ""
+  GOOGLE_CLIENT_SECRET: ""
+  MICROSOFT_CLIENT_ID: ""
+  MICROSOFT_CLIENT_SECRET: ""
+  MICROSOFT_TENANT_ID: ""
+  OIDC_CLIENT_SECRET: ""
+  
+  POSTGRES_PASSWORD: "RCNPostgresPassword2026!"
+  DATABASE_URL: "postgres://RCN:RCNPostgresPassword2026%21@postgres:5432/RCN?sslmode=disable"
+---
+# Source: rcn/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rcn-config
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+data:
+  # DATABASE_URL contains the Postgres password and lives in the Secret
+  # (see secret.yaml). Non-sensitive Postgres fields stay here so the
+  # bootstrap initContainer can read them when enabled=true.
+  POSTGRES_DB: "RCN"
+  POSTGRES_USER: "RCN"
+  MINIO_ENDPOINT: "http://minio:9000"
+  MINIO_WORKSPACE_BUCKET: "workspace"
+  KERNEL_MODE: "k8s_per_user"
+  KERNEL_POD_IMAGE: "ghcr.io/sparklabx/kernel:latest"
+  KERNEL_POD_IDLE_MINUTES: "30"
+  KERNEL_POD_MAX_TOTAL: "50"
+  CORS_ORIGINS: "*"
+  LOG_LEVEL: "info"
+  ENVIRONMENT: "production"
+  SERVICE_PORT: "10000"
+  # Generic OIDC SSO (clientSecret lives in the Secret). redirectUrl /
+  # postLoginRedirect default to the ingress host when left blank.
+  OIDC_ISSUER_URL: ""
+  OIDC_CLIENT_ID: ""
+  OIDC_SCOPES: "openid email profile"
+  OIDC_PROVIDER_NAME: "SSO"
+  OIDC_REDIRECT_URL: "https://rcn.lakehouse.local/api/v1/auth/oidc/callback"
+  OIDC_POST_LOGIN_REDIRECT: "https://rcn.lakehouse.local"
+  OIDC_INTERNAL_ISSUER_URL: ""
+  # Connectors (Trino/Postgres/MySQL) are added at runtime in the UI and stored in
+  # the DB. CONNECTOR_ISSUER is the `iss` of the app-minted tokens; it must match
+  # each connector's required-issuer (e.g. Trino's http-server.authentication.jwt.required-issuer).
+  CONNECTOR_ISSUER: "RCN"
+  # Backend URL reachable FROM kernel pods (in-session OIDC token refresh). The
+  # backend Service is named "backend" in this chart, so the config.go default
+  # (RCN-backend) would be wrong — set the in-cluster FQDN explicitly.
+  KERNEL_CALLBACK_URL: "http://backend.default.svc.cluster.local:10000"
+
+---
+# Source: rcn/templates/backend.yaml
+# RBAC only needed when kernelMode=k8s_per_user; the backend spawns and
+# reaps per-user kernel pods directly via the k8s API.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: rcn-backend
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: backend
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "delete", "deletecollection"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "create", "delete"]
+  # Read per-user pod CPU/memory for the Resource Usage widget. Requires
+  # metrics-server installed in the cluster; without it the widget hides.
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+# Source: rcn/templates/backend.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rcn-backend
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: backend
+subjects:
+  - kind: ServiceAccount
+    name: rcn-backend
+    namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rcn-backend
+---
+# Source: rcn/templates/backend.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: backend
+spec:
+  ports:
+    - port: 10000
+      targetPort: 10000
+  selector:
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    component: backend
+---
+# Source: rcn/templates/frontend.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    component: frontend
+---
+# Source: rcn/templates/minio.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: minio
+spec:
+  clusterIP: None
+  ports:
+    - name: api
+      port: 9000
+      targetPort: 9000
+    - name: console
+      port: 9001
+      targetPort: 9001
+  selector:
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    component: minio
+---
+# Source: rcn/templates/postgres.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: postgres
+spec:
+  clusterIP: None
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    component: postgres
+---
+# Source: rcn/templates/spark-history-server.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-history-server
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: spark-history-server
+spec:
+  ports:
+    - port: 18080
+      targetPort: 18080
+      name: spark-history-server
+  selector:
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    component: spark-history-server
+---
+# Source: rcn/templates/kernel-prepuller.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rcn-kernel-prepuller
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  selector:
+    matchLabels:
+      app: rcn-kernel-prepuller
+  template:
+    metadata:
+      labels:
+        app: rcn-kernel-prepuller
+    spec:
+      containers:
+      - name: prepuller
+        image: "ghcr.io/sparklabx/kernel:latest"
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "while true; do sleep 3600; done"]
+        resources:
+          limits:
+            cpu: 10m
+            memory: 10Mi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+
+---
+# Source: rcn/templates/backend.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: RCN
+      app.kubernetes.io/instance: rcn
+      component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: RCN
+        app.kubernetes.io/instance: rcn
+        component: backend
+    spec:
+      serviceAccountName: rcn-backend
+      containers:
+        - name: backend
+          image: "ghcr.io/sparklabx/backend:latest"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 10000
+          envFrom:
+            - configMapRef:
+                name: rcn-config
+            - secretRef:
+                name: rcn-secrets
+          env:
+            # Tell the in-cluster client which namespace to spawn kernels in.
+            - name: KERNEL_POD_NAMESPACE
+              value: "default"
+            # Per-user kernel pod resources. See values.yaml -> kernel.resources.
+            - name: KERNEL_POD_CPU_REQUEST
+              value: "500m"
+            - name: KERNEL_POD_MEMORY_REQUEST
+              value: "1Gi"
+            - name: KERNEL_POD_CPU_LIMIT
+              value: "2000m"
+            - name: KERNEL_POD_MEMORY_LIMIT
+              value: "4Gi"
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 1Gi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          readinessProbe:
+            tcpSocket:
+              port: 10000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 10000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+---
+# Source: rcn/templates/frontend.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: RCN
+      app.kubernetes.io/instance: rcn
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: RCN
+        app.kubernetes.io/instance: rcn
+        component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "ghcr.io/sparklabx/frontend:latest"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+
+---
+# Source: rcn/templates/spark-history-server.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-history-server
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: spark-history-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: RCN
+      app.kubernetes.io/instance: rcn
+      component: spark-history-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: RCN
+        app.kubernetes.io/instance: rcn
+        component: spark-history-server
+    spec:
+      initContainers:
+        - name: copy-s3a-jars
+          image: "ghcr.io/sparklabx/kernel:latest"
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              cp /usr/local/lib/python3.11/dist-packages/pyspark/jars/hadoop-aws-3.3.4.jar /shared-jars/hadoop-aws-3.3.4.jar
+              cp /usr/local/lib/python3.11/dist-packages/pyspark/jars/aws-java-sdk-bundle-1.12.262.jar /shared-jars/aws-java-sdk-bundle-1.12.262.jar
+          volumeMounts:
+            - name: shared-jars
+              mountPath: /shared-jars
+      containers:
+        - name: spark-history-server
+          image: "apache/spark:3.5.5"
+          imagePullPolicy: IfNotPresent
+          command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.history.HistoryServer"]
+          ports:
+            - containerPort: 18080
+              name: spark-history
+          env:
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rcn-secrets
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rcn-secrets
+                  key: MINIO_SECRET_KEY
+            - name: MINIO_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: rcn-config
+                  key: MINIO_ENDPOINT
+            - name: SPARK_HISTORY_OPTS
+              value: >-
+                -Dspark.history.fs.logDirectory=s3a://workspace/event-logs/
+                -Dspark.hadoop.fs.s3a.endpoint=$(MINIO_ENDPOINT)
+                -Dspark.hadoop.fs.s3a.access.key=$(MINIO_ACCESS_KEY)
+                -Dspark.hadoop.fs.s3a.secret.key=$(MINIO_SECRET_KEY)
+                -Dspark.hadoop.fs.s3a.path.style.access=true
+                -Dspark.history.ui.port=18080
+          volumeMounts:
+            - name: shared-jars
+              mountPath: /opt/spark/jars/hadoop-aws-3.3.4.jar
+              subPath: hadoop-aws-3.3.4.jar
+            - name: shared-jars
+              mountPath: /opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar
+              subPath: aws-java-sdk-bundle-1.12.262.jar
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 512Mi
+          readinessProbe:
+            tcpSocket:
+              port: 18080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 18080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: shared-jars
+          emptyDir: {}
+
+---
+# Source: rcn/templates/minio.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: minio
+spec:
+  serviceName: minio
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: RCN
+      app.kubernetes.io/instance: rcn
+      component: minio
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: RCN
+        app.kubernetes.io/instance: rcn
+        component: minio
+    spec:
+      initContainers:
+        - name: fix-perms
+          image: busybox:1.36
+          command: ["sh", "-c", "mkdir -p /data && chmod -R 777 /data"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: minio
+          image: "minio/minio:latest"
+          # MinIO official image ENTRYPOINT is docker-entrypoint.sh which
+          # execs $@ — so the first arg must be the 'minio' binary, then
+          # its sub-command. (RustFS used a different entrypoint and only
+          # needed the sub-command; this trips you up on the swap.)
+          args: ["minio", "server", "/data", "--console-address", ":9001"]
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rcn-secrets
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rcn-secrets
+                  key: MINIO_ROOT_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: 9000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: "50Gi"
+
+---
+# Source: rcn/templates/postgres.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+    component: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: RCN
+      app.kubernetes.io/instance: rcn
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: RCN
+        app.kubernetes.io/instance: rcn
+        component: postgres
+    spec:
+      # postgres alpine image runs as uid 70 — fix ownership before the
+      # main container starts (works on both fresh PVCs and reused ones).
+      initContainers:
+        - name: fix-perms
+          image: busybox:1.36
+          command: ["sh", "-c", "mkdir -p /var/lib/postgresql/data && chown -R 70:70 /var/lib/postgresql/data && chmod 700 /var/lib/postgresql/data"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: postgres
+          image: "postgres:16-alpine"
+          envFrom:
+            - configMapRef:
+                name: rcn-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rcn-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "RCN"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "RCN"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: "10Gi"
+
+---
+# Source: rcn/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rcn
+  labels:
+    helm.sh/chart: rcn-0.3.0
+    app.kubernetes.io/name: RCN
+    app.kubernetes.io/instance: rcn
+    app.kubernetes.io/version: "main"
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - rcn.lakehouse.local
+        - shs.rcn.lakehouse.local
+      secretName: rcn-tls
+  rules:
+    - host: rcn.lakehouse.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 10000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+    - host: shs.rcn.lakehouse.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spark-history-server
+                port:
+                  number: 18080

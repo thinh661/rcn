@@ -242,6 +242,28 @@ frontend:
     annotations: {}
 
 # ─────────────────────────────────────────────────────────────
+# Spark History Server
+# ─────────────────────────────────────────────────────────────
+sparkHistoryServer:
+  enabled: true
+  replicas: 1
+  image:
+    repository: apache/spark
+    tag: 3.5.5
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  ingress:
+    # Subdomain cho Spark History Server UI
+    # Mặc định: shs.{ingress.host} → shs.rcn.lakehouse.local
+    host: shs.rcn.lakehouse.local
+
+# ─────────────────────────────────────────────────────────────
 # Ingress — set host + ingressClassName for your cluster
 # ─────────────────────────────────────────────────────────────
 ingress:

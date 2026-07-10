@@ -58,6 +58,11 @@ SPARK_DEFAULTS="$CONF_DIR/spark-defaults.conf"
   # Don't delete parent-prefix directory markers (e.g. "users/") on overwrite —
   # outside the user's IAM scope, so the delete is denied (harmless but noisy).
   echo "spark.hadoop.fs.s3a.directory.marker.retention keep"
+
+  # Event Log configuration
+  echo "spark.eventLog.enabled true"
+  echo "spark.eventLog.dir s3a://workspace/event-logs/"
+  echo "spark.history.fs.logDirectory s3a://workspace/event-logs/"
 } > "$SPARK_DEFAULTS"
 echo "spark-defaults.conf written"
 

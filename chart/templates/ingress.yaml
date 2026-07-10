@@ -18,6 +18,9 @@ spec:
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
+        {{- if .Values.sparkHistoryServer.enabled }}
+        - {{ .Values.sparkHistoryServer.ingress.host | default (printf "shs.%s" .Values.ingress.host) }}
+        {{- end }}
       secretName: {{ .Values.ingress.tls.secretName }}
   {{- end }}
   rules:
@@ -38,4 +41,16 @@ spec:
                 name: frontend
                 port:
                   number: 80
+    {{- if .Values.sparkHistoryServer.enabled }}
+    - host: {{ .Values.sparkHistoryServer.ingress.host | default (printf "shs.%s" .Values.ingress.host) }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spark-history-server
+                port:
+                  number: 18080
+    {{- end }}
 {{- end -}}

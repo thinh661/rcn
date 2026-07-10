@@ -170,6 +170,8 @@ func (s *SparkJobService) Submit(ctx context.Context, req *SubmitJobRequest, use
 		execInst = 1
 	}
 
+	webhookURL := req.WebhookURL
+
 	// Persist to Postgres.
 	job := &SparkJob{
 		ID:                   jobID,
@@ -190,8 +192,6 @@ func (s *SparkJobService) Submit(ctx context.Context, req *SubmitJobRequest, use
 		WebhookURL:           webhookURL,
 		CreatedAt:            created.GetCreationTimestamp().Time,
 	}
-
-	webhookURL := req.WebhookURL
 
 	_, err = db.Exec(`
 		INSERT INTO spark_jobs (

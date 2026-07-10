@@ -193,6 +193,27 @@ func MigrateAndSeed(cfg *config.Config) error {
 		`CREATE INDEX IF NOT EXISTS idx_spark_scheduled_jobs_user_id ON spark_scheduled_jobs(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_spark_scheduled_jobs_enabled ON spark_scheduled_jobs(enabled)`,
 
+		// Reusable Spark job templates — persisted config that users submit jobs from.
+		`CREATE TABLE IF NOT EXISTS spark_job_templates (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES admins(id),
+			name VARCHAR(255) NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			type VARCHAR(20) NOT NULL DEFAULT 'Scala',
+			main_class TEXT NOT NULL DEFAULT '',
+			main_app_file TEXT NOT NULL,
+			arguments TEXT[] DEFAULT '{}',
+			spark_conf JSONB DEFAULT '{}',
+			driver_cpu VARCHAR(20) DEFAULT '1',
+			driver_memory VARCHAR(20) DEFAULT '2g',
+			executor_cpu VARCHAR(20) DEFAULT '1',
+			executor_memory VARCHAR(20) DEFAULT '2g',
+			executor_instances INTEGER DEFAULT 1,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_spark_job_templates_user_id ON spark_job_templates(user_id)`,
+
 		// Backfill: OAuth admins originally got username = full email. Storage
 		// now uses username as a path segment (users/<username>/...), and "@" in
 		// S3 keys triggers SigV4 SignatureDoesNotMatch under some clients. Rewrite

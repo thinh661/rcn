@@ -82,6 +82,13 @@ func main() {
 		sparkScheduledJobHandler = handlers.NewSparkScheduledJobHandler(sparkScheduledSvc)
 	}
 
+	// Spark Job Templates Service — pure DB CRUD, no K8s CRD needed.
+	sparkJobTemplateSvc := services.NewSparkJobTemplateService()
+	var sparkJobTemplateHandler *handlers.SparkJobTemplateHandler
+	if sparkJobSvc != nil {
+		sparkJobTemplateHandler = handlers.NewSparkJobTemplateHandler(sparkJobTemplateSvc, sparkJobSvc)
+	}
+
 	// MinIO IAM: per-user accounts + scoped policies for true kernel isolation.
 	// Nil if MinIO not configured — auth + kernel pods then fall back to no creds
 	// (storage features simply unavailable).
@@ -385,6 +392,16 @@ func main() {
 					sparkJobs.PUT("/scheduled-jobs/:id", sparkScheduledJobHandler.UpdateScheduledJob)
 					sparkJobs.DELETE("/scheduled-jobs/:id", sparkScheduledJobHandler.DeleteScheduledJob)
 					sparkJobs.PATCH("/scheduled-jobs/:id/toggle", sparkScheduledJobHandler.ToggleScheduledJob)
+				}
+
+				// Spark job templates API
+				if sparkJobTemplateHandler != nil {
+					sparkJobs.GET("/job-templates", sparkJobTemplateHandler.ListTemplates)
+					sparkJobs.POST("/job-templates", sparkJobTemplateHandler.CreateTemplate)
+					sparkJobs.GET("/job-templates/:id", sparkJobTemplateHandler.GetTemplate)
+					sparkJobs.PUT("/job-templates/:id", sparkJobTemplateHandler.UpdateTemplate)
+					sparkJobs.DELETE("/job-templates/:id", sparkJobTemplateHandler.DeleteTemplate)
+					sparkJobs.POST("/job-templates/:id/run", sparkJobTemplateHandler.RunTemplate)
 				}
 			}
 		}

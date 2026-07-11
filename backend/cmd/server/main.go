@@ -300,41 +300,56 @@ func main() {
 			admin.POST("/secrets/rotate", middleware.RequireSuperAdmin(), secretHandler.RotateSecrets)
 		}
 
-		// Notebooks — admin only in this lite build
+		// Notebooks — multi-tenancy with role-based access:
+		//   viewer  → GET only (own notebooks or public)
+		//   editor  → GET + POST/PUT/DELETE (own notebooks)
+		//   admin   → full access
+		//   superadmin → full access
 		nb := v1.Group("/notebooks")
 		nb.Use(middleware.RequireAdmin(cfg))
 		{
+			// Public read-only endpoints — accessible to all authenticated roles
 			nb.GET("/kernel/specs", notebookHandler.KernelSpecs)
+			nb.GET("", notebookHandler.ListNotebooks)
+			nb.GET("/:id", middleware.RequireNotebookAccess(), notebookHandler.GetNotebook)
+			nb.GET("/:id/export/html", middleware.RequireNotebookAccess(), notebookHandler.ExportNotebookHTML)
 
-			// Per-user storage (each admin has their own users/<adminID>/ prefix)
+			// Storage read — all roles
 			nb.GET("/storage/path", storageHandler.GetUserDataPath)
 			nb.GET("/storage/files", storageHandler.ListUserFiles)
-			nb.POST("/storage/upload", storageHandler.UploadUserFile)
-			nb.POST("/storage/create-folder", storageHandler.CreateUserFolder)
-			nb.DELETE("/storage/files/:filename", storageHandler.DeleteUserFile)
 			nb.GET("/storage/files/:filename/download", storageHandler.DownloadUserFile)
 
-			nb.GET("", notebookHandler.ListNotebooks)
-			nb.POST("", notebookHandler.CreateNotebook)
-			nb.POST("/import", notebookHandler.ImportNotebook)
-			nb.GET("/:id", notebookHandler.GetNotebook)
-			nb.PUT("/:id", notebookHandler.UpdateNotebook)
-			nb.DELETE("/:id", notebookHandler.DeleteNotebook)
-			nb.GET("/:id/export/html", notebookHandler.ExportNotebookHTML)
-			nb.POST("/:id/cells", notebookHandler.CreateCell)
-			nb.PUT("/:id/cells/:cellId", notebookHandler.UpdateCell)
-			nb.DELETE("/:id/cells/:cellId", notebookHandler.DeleteCell)
-			nb.POST("/:id/cells/reorder", notebookHandler.ReorderCells)
+			// Write endpoints — admin, superadmin, or editor only
+			nbWrite := nb.Group("")
+			nbWrite.Use(middleware.RequireRole("admin", "superadmin", "editor"))
+			{
+				nbWrite.POST("", notebookHandler.CreateNotebook)
+				nbWrite.POST("/import", notebookHandler.ImportNotebook)
+				nbWrite.PUT("/:id", notebookHandler.UpdateNotebook)
+				nbWrite.DELETE("/:id", notebookHandler.DeleteNotebook)
+				nbWrite.POST("/:id/cells", notebookHandler.CreateCell)
+				nbWrite.PUT("/:id/cells/:cellId", notebookHandler.UpdateCell)
+				nbWrite.DELETE("/:id/cells/:cellId", notebookHandler.DeleteCell)
+				nbWrite.POST("/:id/cells/reorder", notebookHandler.ReorderCells)
 
-			// Local kernel proxy
-			nb.POST("/:id/kernel/connect", localKernelHandler.Connect)
-			nb.GET("/:id/kernel/status", localKernelHandler.Status)
-			nb.POST("/:id/kernel/interrupt", localKernelHandler.Interrupt)
-			nb.GET("/:id/kernel/active-executions", localKernelHandler.ActiveExecutions)
-			nb.DELETE("/:id/kernel/disconnect", localKernelHandler.Disconnect)
-			nb.DELETE("/:id/kernel/shutdown", localKernelHandler.Shutdown)
-			nb.Any("/:id/kernel/ws/:kernelId/*path", localKernelHandler.WebSocket)
-			nb.Any("/:id/kernel/api/*path", localKernelHandler.ProxyHTTP)
+				// Storage write
+				nbWrite.POST("/storage/upload", storageHandler.UploadUserFile)
+				nbWrite.POST("/storage/create-folder", storageHandler.CreateUserFolder)
+				nbWrite.DELETE("/storage/files/:filename", storageHandler.DeleteUserFile)
+
+				// Local kernel proxy — write operations
+				nbWrite.POST("/:id/kernel/connect", localKernelHandler.Connect)
+				nbWrite.POST("/:id/kernel/interrupt", localKernelHandler.Interrupt)
+				nbWrite.DELETE("/:id/kernel/disconnect", localKernelHandler.Disconnect)
+				nbWrite.DELETE("/:id/kernel/shutdown", localKernelHandler.Shutdown)
+				nbWrite.Any("/:id/kernel/ws/:kernelId/*path", localKernelHandler.WebSocket)
+				nbWrite.Any("/:id/kernel/api/*path", localKernelHandler.ProxyHTTP)
+			}
+
+			// Kernel read-only introspection — admin, superadmin, or editor only
+			// (handlers internally call checkNotebookWriteAccess)
+			nbWrite.GET("/:id/kernel/status", localKernelHandler.Status)
+			nbWrite.GET("/:id/kernel/active-executions", localKernelHandler.ActiveExecutions)
 		}
 
 		// Spark UI proxy — loaded in an iframe, so it authenticates via ?token=
@@ -387,36 +402,57 @@ func main() {
 			v1.POST("/spark/callback", sparkJobHandler.Callback)
 		}
 
-		// Spark batch jobs API
+		// Spark batch jobs API — multi-tenancy with role-based access:
+		//   viewer  → GET jobs only
+		//   editor  → GET + POST/DELETE jobs
+		//   admin   → full access
+		//   superadmin → full access
 		if sparkJobHandler != nil {
 			sparkJobs := v1.Group("/spark")
 			sparkJobs.Use(middleware.RequireAdmin(cfg))
 			{
+				// Read-only endpoints — all roles
 				sparkJobs.GET("/jobs", sparkJobHandler.ListJobs)
-				sparkJobs.POST("/jobs", sparkJobHandler.SubmitJob)
 				sparkJobs.GET("/jobs/:id", sparkJobHandler.GetJob)
-				sparkJobs.DELETE("/jobs/:id", sparkJobHandler.StopJob)
 				sparkJobs.GET("/jobs/:id/logs", sparkJobHandler.GetJobLogs)
-				sparkJobs.POST("/jobs/:id/webhook", sparkJobHandler.SetWebhook)
+
+				// Write endpoints — admin, superadmin, or editor only
+				sparkJobsWrite := sparkJobs.Group("")
+				sparkJobsWrite.Use(middleware.RequireRole("admin", "superadmin", "editor"))
+				{
+					sparkJobsWrite.POST("/jobs", sparkJobHandler.SubmitJob)
+					sparkJobsWrite.DELETE("/jobs/:id", sparkJobHandler.StopJob)
+					sparkJobsWrite.POST("/jobs/:id/webhook", sparkJobHandler.SetWebhook)
+				}
 
 				// Scheduled Spark jobs API
 				if sparkScheduledJobHandler != nil {
 					sparkJobs.GET("/scheduled-jobs", sparkScheduledJobHandler.ListScheduledJobs)
-					sparkJobs.POST("/scheduled-jobs", sparkScheduledJobHandler.CreateScheduledJob)
 					sparkJobs.GET("/scheduled-jobs/:id", sparkScheduledJobHandler.GetScheduledJob)
-					sparkJobs.PUT("/scheduled-jobs/:id", sparkScheduledJobHandler.UpdateScheduledJob)
-					sparkJobs.DELETE("/scheduled-jobs/:id", sparkScheduledJobHandler.DeleteScheduledJob)
-					sparkJobs.PATCH("/scheduled-jobs/:id/toggle", sparkScheduledJobHandler.ToggleScheduledJob)
+
+					sparkScheduledWrite := sparkJobs.Group("")
+					sparkScheduledWrite.Use(middleware.RequireRole("admin", "superadmin", "editor"))
+					{
+						sparkScheduledWrite.POST("/scheduled-jobs", sparkScheduledJobHandler.CreateScheduledJob)
+						sparkScheduledWrite.PUT("/scheduled-jobs/:id", sparkScheduledJobHandler.UpdateScheduledJob)
+						sparkScheduledWrite.DELETE("/scheduled-jobs/:id", sparkScheduledJobHandler.DeleteScheduledJob)
+						sparkScheduledWrite.PATCH("/scheduled-jobs/:id/toggle", sparkScheduledJobHandler.ToggleScheduledJob)
+					}
 				}
 
 				// Spark job templates API
 				if sparkJobTemplateHandler != nil {
 					sparkJobs.GET("/job-templates", sparkJobTemplateHandler.ListTemplates)
-					sparkJobs.POST("/job-templates", sparkJobTemplateHandler.CreateTemplate)
 					sparkJobs.GET("/job-templates/:id", sparkJobTemplateHandler.GetTemplate)
-					sparkJobs.PUT("/job-templates/:id", sparkJobTemplateHandler.UpdateTemplate)
-					sparkJobs.DELETE("/job-templates/:id", sparkJobTemplateHandler.DeleteTemplate)
-					sparkJobs.POST("/job-templates/:id/run", sparkJobTemplateHandler.RunTemplate)
+
+					sparkTemplateWrite := sparkJobs.Group("")
+					sparkTemplateWrite.Use(middleware.RequireRole("admin", "superadmin", "editor"))
+					{
+						sparkTemplateWrite.POST("/job-templates", sparkJobTemplateHandler.CreateTemplate)
+						sparkTemplateWrite.PUT("/job-templates/:id", sparkJobTemplateHandler.UpdateTemplate)
+						sparkTemplateWrite.DELETE("/job-templates/:id", sparkJobTemplateHandler.DeleteTemplate)
+						sparkTemplateWrite.POST("/job-templates/:id/run", sparkJobTemplateHandler.RunTemplate)
+					}
 				}
 			}
 		}

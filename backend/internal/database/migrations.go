@@ -214,6 +214,37 @@ func MigrateAndSeed(cfg *config.Config) error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_spark_job_templates_user_id ON spark_job_templates(user_id)`,
 
+		// Audit log for tracking admin actions (create/update/delete) with
+		// user context, resource identifiers, and request metadata.
+		`CREATE TABLE IF NOT EXISTS audit_logs (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID,
+			username VARCHAR(255) DEFAULT '',
+			action VARCHAR(50) NOT NULL,
+			resource_type VARCHAR(50) NOT NULL,
+			resource_id VARCHAR(255) DEFAULT '',
+			details JSONB DEFAULT '{}',
+			ip_address VARCHAR(45) DEFAULT '',
+			user_agent TEXT DEFAULT '',
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id)`,
+
+	// Extend role values to support multi-tenancy: 'editor' and 'viewer' in
+		// addition to 'admin' and 'superadmin'. Drop and recreate the column default
+		// to include all four values, then add a CHECK constraint.
+		`ALTER TABLE admions ALTER COLUMN role SET DEFAULT 'admin'`,
+		`DO $$ BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_constraint WHERE conname = 'admins_role_check'
+			) THEN
+				ALTER TABLE admins ADD CONSTRAINT admins_role_check
+				CHECK (role IN ('admin', 'superadmin', 'editor', 'viewer'));
+			END IF;
+		END $$`,
+
 		// Backfill: OAuth admins originally got username = full email. Storage
 		// now uses username as a path segment (users/<username>/...), and "@" in
 		// S3 keys triggers SigV4 SignatureDoesNotMatch under some clients. Rewrite

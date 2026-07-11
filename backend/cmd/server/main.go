@@ -197,6 +197,7 @@ func main() {
 	notebookHandler := handlers.NewNotebookHandler()
 	userHandler := handlers.NewUserManagementHandler()
 	allowedDomainHandler := handlers.NewAllowedDomainHandler()
+	auditLogHandler := handlers.NewAuditLogHandler()
 
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -251,6 +252,8 @@ func main() {
 		v1.GET("/auth/oidc/start", authLimiter, authHandler.OIDCStart)
 		v1.GET("/auth/oidc/callback", authLimiter, authHandler.OIDCCallback)
 
+		v1.Use(middleware.AuditMiddleware())
+
 		admin := v1.Group("")
 		admin.Use(middleware.RequireAdmin(cfg))
 		{
@@ -275,6 +278,7 @@ func main() {
 
 			// OAuth allowlist — superadmin writes only
 			admin.GET("/allowed-domains", allowedDomainHandler.List)
+			admin.GET("/admin/audit-logs", middleware.RequireSuperAdmin(), auditLogHandler.ListAuditLogs)
 			admin.POST("/allowed-domains", middleware.RequireSuperAdmin(), allowedDomainHandler.Create)
 			admin.PATCH("/allowed-domains/:id", middleware.RequireSuperAdmin(), allowedDomainHandler.Update)
 			admin.DELETE("/allowed-domains/:id", middleware.RequireSuperAdmin(), allowedDomainHandler.Delete)

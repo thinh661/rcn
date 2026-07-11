@@ -20,7 +20,7 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 |-------|----------|-----------|:----------:|
 | **Phase 1** | Nền tảng mở rộng | 2-3 tuần | 🟢 Done |
 | **Phase 2** | Batch & Scheduling | 3-4 tuần | 🟢 Done |
-| **Phase 3** | Enterprise Features | 4-5 tuần | 🟡 In Progress |
+| **Phase 3** | Enterprise Features | 4-5 tuần | 🟢 Done |
 | **Phase 4** | Monitoring & Operations | 3-4 tuần | 🔵 Backlog |
 
 ---
@@ -61,12 +61,12 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 
 | # | Feature | Type | Trạng thái | Assigned |
 |---|---------|------|:----------:|----------|
-| 3.1 | Multi-tenancy & RBAC (roles: admin/editor/viewer) | 🏗️ Kiến trúc | 🔵 Backlog | - |
-| 3.2 | Audit Logging (API action history) | ⚡ Feature | 🔵 Backlog | - |
-| 3.3 | Git Integration (notebook versioning) | ⚡ Feature | 🔵 Backlog | - |
-| 3.4 | Spark Connect (gRPC remote SparkSession) | ⚡ Feature | 🔵 Backlog | - |
-| 3.5 | Secret Management (encrypted credentials store) | 🏗️ Kiến trúc | 🔵 Backlog | - |
-| 3.6 | Resource Usage & Cost Tracking | ⚡ Feature | 🔵 Backlog | - |
+| 3.1 | Multi-tenancy & RBAC (roles: admin/editor/viewer) | 🏗️ Kiến trúc | 🟢 Done | agy |
+| 3.2 | Audit Logging (API action history) | ⚡ Feature | 🟢 Done | agy |
+| 3.3 | Git Integration (notebook versioning) | ⚡ Feature | 🟢 Done | agy |
+| 3.4 | Spark Connect (gRPC remote SparkSession) | ⚡ Feature | 🟢 Done | agy |
+| 3.5 | Secret Management (encrypted credentials store) | 🏗️ Kiến trúc | 🟢 Done | agy |
+| 3.6 | Resource Usage & Cost Tracking | ⚡ Feature | 🟢 Done | agy |
 
 ---
 

@@ -203,6 +203,46 @@ func main() {
 	secretHandler := handlers.NewSecretHandler(secretVault)
 	auditLogHandler := handlers.NewAuditLogHandler()
 
+	// Phase 3.3: Git Integration (Notebook Versioning)
+	gitSvc := services.NewGitIntegrationService(
+		cfg.GitEnabled,
+		cfg.GitAuthorName,
+		cfg.GitAuthorEmail,
+		cfg.GitSSHKeyPath,
+	)
+	gitHandler := handlers.NewGitIntegrationHandler(gitSvc)
+
+	// Phase 3.4: Spark Connect (gRPC Remote SparkSession)
+	sparkConnectSvc := services.NewSparkConnectService(
+		cfg.SparkConnectEndpoint,
+		cfg.SparkConnectPort,
+		cfg.SparkConnectEnabled,
+	)
+	sparkConnectHandler := handlers.NewSparkConnectHandler(sparkConnectSvc)
+
+	// Phase 3.6: Resource Usage & Cost Tracking
+	resourceUsageSvc := services.NewResourceUsageService()
+	resourceUsageHandler := handlers.NewResourceUsageHandler(resourceUsageSvc, cfg)
+
+	// Seed default cost rates from config.
+	func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		defaultRates := map[string]struct {
+			Rate float64
+			Unit string
+		}{
+			"spark_cpu":    {cfg.CostRateSparkCPU, "CPU-hour"},
+			"spark_memory": {cfg.CostRateSparkMemory, "GB-hour"},
+			"kernel_cpu":   {cfg.CostRateKernelCPU, "CPU-hour"},
+			"kernel_memory": {cfg.CostRateKernelMemory, "GB-hour"},
+			"storage":      {cfg.CostRateStorage, "GB-month"},
+		}
+		if err := resourceUsageSvc.SeedDefaultRates(ctx, defaultRates); err != nil {
+			log.Warn().Err(err).Msg("failed to seed default cost rates — will use defaults")
+		}
+	}()
+
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -456,13 +496,40 @@ func main() {
 				}
 			}
 		}
-	}
+		// Phase 3.3: Git Integration routes (within notebook group)
+		gitWriteGuard := middleware.RequireRole("admin", "superadmin", "editor")
+		gitRoutes := nb.Group(":id/git")
+		{
+			// Status — read-only, mọi role đều xem được
+			gitRoutes.GET("/status", gitHandler.GetLinkStatus)
 
-	addr := ":" + cfg.ServicePort
-	log.Info().Str("addr", addr).Msg("server listening")
-	if err := router.Run(addr); err != nil {
-		log.Fatal().Err(err).Msg("server failed")
-	}
+			// Write operations — editor+
+			gitRoutes.POST("/link", gitWriteGuard, gitHandler.LinkNotebook)
+			gitRoutes.POST("/commit", gitWriteGuard, gitHandler.CommitNotebook)
+			gitRoutes.DELETE("/link", gitWriteGuard, gitHandler.UnlinkNotebook)
+		}
+
+		// Phase 3.4: Spark Connect — admin required
+		if cfg.SparkConnectEnabled {
+			spc := v1.Group("/spark-connect")
+			spc.Use(middleware.RequireAdmin(cfg))
+			{
+				spc.GET("/config", sparkConnectHandler.GetConfig)
+				spc.POST("/sessions", sparkConnectHandler.CreateSession)
+				spc.GET("/sessions", sparkConnectHandler.ListSessions)
+				spc.DELETE("/sessions/:id", sparkConnectHandler.CloseSession)
+			}
+		}
+
+		// Phase 3.6: Resource Usage & Cost Tracking
+		// — tự xem usage của mình (admin required)
+		v1.GET("/resource-usage/my", middleware.RequireAdmin(cfg), resourceUsageHandler.MyUsage)
+
+		// — admin/superadmin management (trong admin group)
+		admin.GET("/resource-usage", middleware.RequireSuperAdmin(), resourceUsageHandler.ListAllUsage)
+		admin.GET("/resource-usage/summary", middleware.RequireSuperAdmin(), resourceUsageHandler.UsageSummary)
+		admin.GET("/cost-rates", middleware.RequireSuperAdmin(), resourceUsageHandler.ListCostRates)
+		admin.PUT("/cost-rates/:resource_type", middleware.RequireSuperAdmin(), resourceUsageHandler.SetCostRate)
 }
 
 // connectorSigningKeyFromDB loads the connector signing key from app_secrets,

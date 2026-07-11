@@ -271,6 +271,61 @@ func MigrateAndSeed(cfg *config.Config) error {
 				END;
 			END LOOP;
 		END $$`,
+
+		// Phase 3.3: Notebook Git links for versioning
+		`CREATE TABLE IF NOT EXISTS notebook_git_links (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			notebook_id UUID UNIQUE NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
+			repo_url TEXT NOT NULL,
+			branch VARCHAR(255) NOT NULL DEFAULT 'main',
+			file_path TEXT NOT NULL,
+			auth_token_enc TEXT NOT NULL DEFAULT '',
+			last_committed_at TIMESTAMPTZ,
+			last_commit_sha VARCHAR(64) DEFAULT '',
+			last_committer VARCHAR(255) DEFAULT '',
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+
+		// Phase 3.4: Spark Connect sessions
+		`CREATE TABLE IF NOT EXISTS spark_connect_sessions (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES admins(id),
+			session_id VARCHAR(255) NOT NULL DEFAULT '',
+			status VARCHAR(50) NOT NULL DEFAULT 'active',
+			endpoint VARCHAR(255) NOT NULL DEFAULT '',
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			last_active_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_spark_connect_sessions_user ON spark_connect_sessions(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_spark_connect_sessions_status ON spark_connect_sessions(status)`,
+
+		// Phase 3.6: Resource usage and cost tracking
+		`CREATE TABLE IF NOT EXISTS resource_usage (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES admins(id),
+			resource_type VARCHAR(50) NOT NULL,
+			amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+			unit VARCHAR(20) NOT NULL DEFAULT '',
+			cost_estimate DOUBLE PRECISION NOT NULL DEFAULT 0,
+			currency VARCHAR(10) NOT NULL DEFAULT 'VND',
+			period_start TIMESTAMPTZ NOT NULL,
+			period_end TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_resource_usage_user ON resource_usage(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_resource_usage_period ON resource_usage(period_start, period_end)`,
+		`CREATE INDEX IF NOT EXISTS idx_resource_usage_type ON resource_usage(resource_type)`,
+
+		`CREATE TABLE IF NOT EXISTS cost_rates (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			resource_type VARCHAR(50) UNIQUE NOT NULL,
+			rate_per_unit DOUBLE PRECISION NOT NULL DEFAULT 0,
+			unit VARCHAR(20) NOT NULL DEFAULT '',
+			currency VARCHAR(10) NOT NULL DEFAULT 'VND',
+			effective_from TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
 	}
 
 	for _, m := range migrations {

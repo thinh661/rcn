@@ -97,6 +97,24 @@ type Config struct {
 	KernelResourceCustomMaxCPU  string // hard ceiling for custom cpu, e.g. "8"
 	KernelResourceCustomMaxMem  string // hard ceiling for custom memory, e.g. "16Gi"
 
+	// Git Integration (notebook versioning)
+	GitEnabled   bool
+	GitSSHKeyPath string
+	GitAuthorName string
+	GitAuthorEmail string
+
+	// Spark Connect (gRPC remote SparkSession)
+	SparkConnectEnabled  bool
+	SparkConnectEndpoint string
+	SparkConnectPort     string
+
+	// Cost Tracking rates (VND per unit)
+	CostRateSparkCPU     float64 // VND per CPU-hour
+	CostRateSparkMemory  float64 // VND per GB-hour
+	CostRateKernelCPU    float64 // VND per CPU-hour
+	CostRateKernelMemory float64 // VND per GB-hour
+	CostRateStorage      float64 // VND per GB-month
+
 	// CORS
 	CORSOrigins []string
 }
@@ -174,6 +192,21 @@ func Load() *Config {
 		KernelResourceCustomMaxCPU:  getEnv("KERNEL_RESOURCE_CUSTOM_MAX_CPU", ""),
 		KernelResourceCustomMaxMem:  getEnv("KERNEL_RESOURCE_CUSTOM_MAX_MEMORY", ""),
 
+		GitEnabled:      getEnvBool("GIT_ENABLED", false),
+		GitSSHKeyPath:   getEnv("GIT_SSH_KEY_PATH", ""),
+		GitAuthorName:   getEnv("GIT_AUTHOR_NAME", "RCN Notebook"),
+		GitAuthorEmail:  getEnv("GIT_AUTHOR_EMAIL", "notebook@rcn.local"),
+
+		SparkConnectEnabled:  getEnvBool("SPARK_CONNECT_ENABLED", false),
+		SparkConnectEndpoint: getEnv("SPARK_CONNECT_ENDPOINT", ""),
+		SparkConnectPort:     getEnv("SPARK_CONNECT_PORT", "15002"),
+
+		CostRateSparkCPU:     getEnvFloat("COST_RATE_SPARK_CPU", 500.0),
+		CostRateSparkMemory:  getEnvFloat("COST_RATE_SPARK_MEMORY", 100.0),
+		CostRateKernelCPU:    getEnvFloat("COST_RATE_KERNEL_CPU", 1000.0),
+		CostRateKernelMemory: getEnvFloat("COST_RATE_KERNEL_MEMORY", 200.0),
+		CostRateStorage:      getEnvFloat("COST_RATE_STORAGE", 50.0),
+
 		CORSOrigins: splitCORSOrigins(getEnv("CORS_ORIGINS", "http://localhost:3000")),
 	}
 }
@@ -195,6 +228,15 @@ func getEnvInt(key string, fallback int) int {
 	if value, ok := os.LookupEnv(key); ok {
 		if intVal, err := strconv.Atoi(value); err == nil {
 			return intVal
+		}
+	}
+	return fallback
+}
+
+func getEnvFloat(key string, fallback float64) float64 {
+	if value, ok := os.LookupEnv(key); ok {
+		if f, err := strconv.ParseFloat(value, 64); err == nil {
+			return f
 		}
 	}
 	return fallback

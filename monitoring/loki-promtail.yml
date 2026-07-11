@@ -1,0 +1,32 @@
+# RCN Logging Configuration — Loki / Promtail
+# Deploy alongside Prometheus stack in the monitoring namespace.
+
+scrape_configs:
+  - job_name: rcn-backend-logs
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: rcn-backend
+          __path__: /var/log/rcn/*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\s+(?P<level>\w+)\s+(?P<message>.*)$'
+      - labels:
+          level:
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+
+  - job_name: rcn-spark-logs
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: rcn-spark
+          __path__: /var/log/spark/**/*.log
+
+  - job_name: rcn-kernel-logs
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: rcn-kernel
+          __path__: /var/log/kernels/**/*.log

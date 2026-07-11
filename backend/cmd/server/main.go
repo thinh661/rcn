@@ -243,6 +243,15 @@ func main() {
 		}
 	}()
 
+	// Phase 4: Monitoring & Operations
+	metricsCollector := services.NewMetricsCollector()
+	healthChecker := services.NewHealthChecker(
+		cfg.DatabaseURL,
+		cfg.MinIOEndpoint != "",
+		cfg.KernelMode != "",
+	)
+	monitoringHandler := handlers.NewMonitoringHandler(metricsCollector, healthChecker, cfg)
+
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -279,9 +288,10 @@ func main() {
 
 	router.Use(cors.New(corsConfig))
 
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "service": cfg.ServiceName, "time": time.Now().UTC()})
-	})
+	// Phase 4: Metrics middleware — record HTTP request metrics globally.
+	router.Use(middleware.MetricsMiddleware(metricsCollector))
+
+	router.GET("/health", monitoringHandler.GetHealth)
 
 	v1 := router.Group("/api/v1")
 	{
@@ -530,6 +540,11 @@ func main() {
 		admin.GET("/resource-usage/summary", middleware.RequireSuperAdmin(), resourceUsageHandler.UsageSummary)
 		admin.GET("/cost-rates", middleware.RequireSuperAdmin(), resourceUsageHandler.ListCostRates)
 		admin.PUT("/cost-rates/:resource_type", middleware.RequireSuperAdmin(), resourceUsageHandler.SetCostRate)
+
+		// Phase 4: System monitoring (superadmin)
+		admin.GET("/system/health", monitoringHandler.GetSystemHealth)
+		admin.GET("/system/info", monitoringHandler.GetSystemInfo)
+		admin.GET("/metrics", monitoringHandler.GetMetrics)
 }
 
 // connectorSigningKeyFromDB loads the connector signing key from app_secrets,

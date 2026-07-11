@@ -21,7 +21,7 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 | **Phase 1** | Nền tảng mở rộng | 2-3 tuần | 🟢 Done |
 | **Phase 2** | Batch & Scheduling | 3-4 tuần | 🟢 Done |
 | **Phase 3** | Enterprise Features | 4-5 tuần | 🟢 Done |
-| **Phase 4** | Monitoring & Operations | 3-4 tuần | 🔵 Backlog |
+| **Phase 4** | Monitoring & Operations | 3-4 tuần | 🟢 Done |
 
 ---
 
@@ -67,6 +67,22 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 | 3.4 | Spark Connect (gRPC remote SparkSession) | ⚡ Feature | 🟢 Done | agy |
 | 3.5 | Secret Management (encrypted credentials store) | 🏗️ Kiến trúc | 🟢 Done | agy |
 | 3.6 | Resource Usage & Cost Tracking | ⚡ Feature | 🟢 Done | agy |
+
+---
+
+## 🚀 Phase 4: Monitoring & Operations
+
+**Mục tiêu:** Prometheus metrics, health checks, monitoring dashboard, alerts
+
+| # | Feature | Type | Trạng thái | Assigned |
+|---|---------|------|:----------:|----------|
+| 4.1 | Prometheus Metrics (API + runtime) | ⚡ Backend | 🟢 Done | main |
+| 4.2 | Health Checks + System Health API | ⚡ Backend | 🟢 Done | main |
+| 4.3 | Grafana Dashboard templates | 📦 Config | 🟢 Done | main |
+| 4.4 | Log Aggregation (Loki config) | 📦 Config | 🟢 Done | main |
+| 4.5 | Alert Rules (Prometheus) | ⚡ Config | 🟢 Done | main |
+| 4.6 | System Admin Dashboard (Frontend) | ⚡ Frontend | 🟢 Done | agy |
+| 2.5 | Batch Dashboard (Frontend) | ⚡ Frontend | 🟢 Done | agy |
 
 ---
 

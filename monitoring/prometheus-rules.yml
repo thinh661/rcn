@@ -1,0 +1,78 @@
+groups:
+  - name: rcn-platform
+    interval: 30s
+    rules:
+      # ─── Service Down ───────────────────────────────────────
+      - alert: BackendDown
+        expr: up{job="rcn-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RCN Backend is down"
+          description: "Backend has been unreachable for >1 minute."
+
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "Database has been unreachable for >1 minute."
+
+      - alert: MinIODown
+        expr: up{job="minio"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO storage is down"
+          description: "Object storage has been unreachable for >2 minutes."
+
+      # ─── Resource Exhaustion ──────────────────────────────────
+      - alert: HighActiveKernels
+        expr: rcn_kernel_sessions_active > 40
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of active kernels ({{ $value }})"
+          description: "Active kernels > 40 for >5 minutes. Consider scaling resources."
+
+      - alert: HighSparkJobFailureRate
+        expr: rate(rcn_spark_jobs_total{status="failed"}[15m]) / rate(rcn_spark_jobs_total[15m]) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Spark job failure rate ({{ $value | humanizePercentage }})"
+          description: ">20% of Spark jobs failed in the last 15 minutes."
+
+      - alert: HighMemoryUsage
+        expr: go_memstats_alloc_bytes{job="rcn-backend"} > 1e9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backend memory usage > 1GB"
+          description: "Memory allocation is {{ $value | humanize }}."
+
+      # ─── Anomaly Detection ────────────────────────────────────
+      - alert: SpikeInHTTPErrors
+        expr: rate(rcn_http_requests_total{status=~"5.."}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike in HTTP 5xx errors ({{ $value }}/sec)"
+          description: "More than 10 5xx errors/sec in the last 2 minutes."
+
+      - alert: HighResponseLatency
+        expr: histogram_quantile(0.99, sum(rate(rcn_http_request_duration_seconds_bucket[5m])) by (le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P99 response latency > 2 seconds"
+          description: "Response latency is {{ $value }}s in the 99th percentile."

@@ -110,6 +110,7 @@ func MigrateAndSeed(cfg *config.Config) error {
 		// Generic app-managed secrets (e.g. the connector signing key) — persisted
 		// in the DB so they survive restarts without a dedicated volume.
 		`CREATE TABLE IF NOT EXISTS app_secrets (key VARCHAR(64) PRIMARY KEY, value TEXT NOT NULL)`,
+		`ALTER TABLE app_secrets ADD COLUMN IF NOT EXISTS rotation_version INTEGER NOT NULL DEFAULT 0`,
 
 		// K8s per-user pod tracking
 		`CREATE TABLE IF NOT EXISTS user_kernel_pods (
@@ -233,9 +234,8 @@ func MigrateAndSeed(cfg *config.Config) error {
 		`CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id)`,
 
 	// Extend role values to support multi-tenancy: 'editor' and 'viewer' in
-		// addition to 'admin' and 'superadmin'. Drop and recreate the column default
-		// to include all four values, then add a CHECK constraint.
-		`ALTER TABLE admions ALTER COLUMN role SET DEFAULT 'admin'`,
+		// addition to 'admin' and 'superadmin'. Add a CHECK constraint to ensure only
+		// valid roles are stored.
 		`DO $$ BEGIN
 			IF NOT EXISTS (
 				SELECT 1 FROM pg_constraint WHERE conname = 'admins_role_check'

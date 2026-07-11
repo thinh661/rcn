@@ -146,8 +146,8 @@ func (h *UserManagementHandler) UpdateRole(c *gin.Context) {
 		return
 	}
 
-	if req.Role != "superadmin" && req.Role != "admin" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "role must be superadmin or admin"})
+	if req.Role != "superadmin" && req.Role != "admin" && req.Role != "editor" && req.Role != "viewer" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "role must be superadmin, admin, editor, or viewer"})
 		return
 	}
 

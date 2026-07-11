@@ -197,6 +197,10 @@ func main() {
 	notebookHandler := handlers.NewNotebookHandler()
 	userHandler := handlers.NewUserManagementHandler()
 	allowedDomainHandler := handlers.NewAllowedDomainHandler()
+
+	// Secret vault — encrypted key-value store for app secrets (superadmin only).
+	secretVault := services.NewSecretVault(cfg)
+	secretHandler := handlers.NewSecretHandler(secretVault)
 	auditLogHandler := handlers.NewAuditLogHandler()
 
 	if cfg.Environment == "production" {
@@ -287,6 +291,13 @@ func main() {
 			admin.GET("/resource-presets", middleware.RequireSuperAdmin(), resourcePresetsAdminHandler.List)
 			admin.POST("/resource-presets", middleware.RequireSuperAdmin(), resourcePresetsAdminHandler.Upsert)
 			admin.DELETE("/resource-presets/:id", middleware.RequireSuperAdmin(), resourcePresetsAdminHandler.Delete)
+
+			// Secret management — superadmin only
+			admin.GET("/secrets", middleware.RequireSuperAdmin(), secretHandler.ListSecrets)
+			admin.GET("/secrets/:key", middleware.RequireSuperAdmin(), secretHandler.GetSecret)
+			admin.PUT("/secrets/:key", middleware.RequireSuperAdmin(), secretHandler.SetSecret)
+			admin.DELETE("/secrets/:key", middleware.RequireSuperAdmin(), secretHandler.DeleteSecret)
+			admin.POST("/secrets/rotate", middleware.RequireSuperAdmin(), secretHandler.RotateSecrets)
 		}
 
 		// Notebooks — admin only in this lite build

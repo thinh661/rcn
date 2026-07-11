@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/rcn/rcn/backend/internal/config"
+	"github.com/rcn/rcn/backend/internal/database"
 )
 
 // isSessionToken reports whether the JWT is a normal login session token, as
@@ -152,6 +153,70 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		c.Next()
+	}
+}
+
+// RequireRole returns middleware that checks the admin_role claim against the list
+// of allowed roles. It must be placed after RequireAdmin (which sets admin_role on
+// the context from the JWT claim).
+func RequireRole(roles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		adminRole, exists := c.Get("admin_role")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			c.Abort()
+			return
+		}
+		roleStr, ok := adminRole.(string)
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+			c.Abort()
+			return
+		}
+		for _, allowed := range roles {
+			if roleStr == allowed {
+				c.Next()
+				return
+			}
+		}
+		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
+		c.Abort()
+	}
+}
+
+// RequireNotebookAccess checks that a viewer can access a specific notebook by :id.
+// For non-viewer roles, access is delegated to the handler's own checks.
+// Must be placed after RequireAdmin (which sets admin_id and admin_role).
+func RequireNotebookAccess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		adminRole, _ := c.Get("admin_role")
+		if adminRole == "viewer" {
+			notebookID := c.Param("id")
+			if notebookID == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "notebook ID required"})
+				c.Abort()
+				return
+			}
+			adminID, _ := c.Get("admin_id")
+			callerID, _ := adminID.(string)
+
+			db := database.GetDB()
+			var ownerID string
+			var isPublic bool
+			if err := db.QueryRow(
+				"SELECT owner_id, is_public FROM notebooks WHERE id = $1", notebookID,
+			).Scan(&ownerID, &isPublic); err != nil {
+				c.JSON(http.StatusNotFound, gin.H{"error": "notebook not found"})
+				c.Abort()
+				return
+			}
+			if ownerID != callerID && !isPublic {
+				c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+				c.Abort()
+				return
+			}
+		}
 		c.Next()
 	}
 }

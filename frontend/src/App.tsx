@@ -19,6 +19,8 @@ const NotebookPage = React.lazy(() => import('./components/Notebooks/NotebookPag
 const SparkJobsPage = React.lazy(() => import('./components/SparkJobs/SparkJobsPage'));
 const SystemAdmin = React.lazy(() => import('./pages/SystemAdmin'));
 const BatchDashboard = React.lazy(() => import('./pages/BatchDashboard'));
+const AIAssistant = React.lazy(() => import('./pages/AIAssistant'));
+const Billing = React.lazy(() => import('./pages/Billing'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,6 +74,8 @@ const AdminLayout: React.FC = () => {
                 <Route path="/spark-jobs" element={<SparkJobsPage />} />
                 <Route path="/admin/system" element={<SystemAdmin />} />
                 <Route path="/batch/dashboard" element={<BatchDashboard />} />
+                <Route path="/admin/billing" element={<Billing />} />
+                <Route path="/notebooks/:id/ai" element={<AIAssistant />} />
                 <Route path="*" element={<Navigate to="/notebooks" replace />} />
               </Routes>
             </React.Suspense>

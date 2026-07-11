@@ -86,6 +86,26 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 
 ---
 
+## 🚀 Phase 5: Enterprise Plus — Đang làm
+
+**Mục tiêu:** RCN tiến gần hơn tới Databricks-level platform
+
+| # | Feature | Type | Trạng thái | Assigned |
+|---|---------|------|:----------:|----------|
+| 5.1 | Data Catalog (backend) | ⚡ Backend | 🟢 Done | main |
+| 5.1 | Data Catalog (migration + routes) | ⚡ Backend | 🟢 Done | main |
+| 5.2 | Workflows (DAG Jobs) — backend | ⚡ Backend | 🟡 In Progress | agy ⚡ |
+| 5.3 | MLflow Integration | ⚡ Backend | 🔵 Backlog | main |
+| 5.4 | Notebook Scheduler — backend | ⚡ Backend | 🟡 In Progress | agy ⚡ |
+| 5.5 | AI Assistant — frontend + backend | ⚡ Feature | 🟢 Done | agy + main |
+| 5.6 | Billing Dashboard — frontend | ⚡ Frontend | 🟢 Done | agy |
+| 5.7 | Team/Org Tree — backend | 🏗️ Backend | 🟡 In Progress | agy ⚡ |
+| 5.8 | API Docs (Swagger) | 📦 Tooling | 🔵 Backlog | main |
+| 5.9 | Unit + Integration Tests | 🔧 Quality | 🔵 Backlog | agy |
+| 5.10 | Delta Lake / Delta Sharing | ⚡ Config | 🔵 Backlog | agy |
+
+---
+
 ## 📐 Kiến trúc Phase 1
 
 ```mermaid

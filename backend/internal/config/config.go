@@ -115,6 +115,13 @@ type Config struct {
 	CostRateKernelMemory float64 // VND per GB-hour
 	CostRateStorage      float64 // VND per GB-month
 
+	// AI Assistant
+	AIEnabled  bool
+	AIProvider string
+	AIAPIKey   string
+	AIModel    string
+	AIEndpoint string
+
 	// CORS
 	CORSOrigins []string
 }
@@ -206,6 +213,12 @@ func Load() *Config {
 		CostRateKernelCPU:    getEnvFloat("COST_RATE_KERNEL_CPU", 1000.0),
 		CostRateKernelMemory: getEnvFloat("COST_RATE_KERNEL_MEMORY", 200.0),
 		CostRateStorage:      getEnvFloat("COST_RATE_STORAGE", 50.0),
+
+		AIEnabled:  getEnvBool("AI_ENABLED", false),
+		AIProvider: getEnv("AI_PROVIDER", "openai"),
+		AIAPIKey:   getEnv("AI_API_KEY", ""),
+		AIModel:    getEnv("AI_MODEL", "gpt-4o-mini"),
+		AIEndpoint: getEnv("AI_ENDPOINT", ""),
 
 		CORSOrigins: splitCORSOrigins(getEnv("CORS_ORIGINS", "http://localhost:3000")),
 	}

@@ -252,6 +252,33 @@ func main() {
 	)
 	monitoringHandler := handlers.NewMonitoringHandler(metricsCollector, healthChecker, cfg)
 
+	// Phase 5.1: Data Catalog
+	catalogSvc := services.NewCatalogService()
+	catalogHandler := handlers.NewCatalogHandler(catalogSvc)
+
+	// Phase 5.2: Workflows
+	workflowSvc := services.NewWorkflowService()
+	workflowHandler := handlers.NewWorkflowHandler(workflowSvc)
+
+	// Phase 5.4: Notebook Scheduler
+	notebookSchedulerSvc := services.NewNotebookSchedulerService()
+	notebookSchedulerHandler := handlers.NewNotebookSchedulerHandler(notebookSchedulerSvc)
+
+	// Phase 5.5: AI Assistant
+	aiCfg := services.AIAssistantConfig{
+		Enabled:  cfg.AIEnabled,
+		Provider: cfg.AIProvider,
+		APIKey:   cfg.AIAPIKey,
+		Model:    cfg.AIModel,
+		Endpoint: cfg.AIEndpoint,
+	}
+	aiAssistantSvc := services.NewAIAssistantService(aiCfg)
+	aiAssistantHandler := handlers.NewAIAssistantHandler(aiAssistantSvc)
+
+	// Phase 5.7: Organizations
+	orgSvc := services.NewOrgService()
+	orgHandler := handlers.NewOrgHandler(orgSvc)
+
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -545,6 +572,48 @@ func main() {
 		admin.GET("/system/health", monitoringHandler.GetSystemHealth)
 		admin.GET("/system/info", monitoringHandler.GetSystemInfo)
 		admin.GET("/metrics", monitoringHandler.GetMetrics)
+
+		// Phase 5.1: Data Catalog
+		admin.GET("/catalog/tree", catalogHandler.GetTree)
+		admin.GET("/catalog/search", catalogHandler.Search)
+		admin.GET("/catalog/:id", catalogHandler.GetEntry)
+		admin.POST("/catalog", catalogHandler.UpsertEntry)
+		admin.DELETE("/catalog/:id", catalogHandler.DeleteEntry)
+
+		// Phase 5.2: Workflows (superadmin)
+		admin.GET("/workflows", workflowHandler.ListWorkflows)
+		admin.POST("/workflows", workflowHandler.CreateWorkflow)
+		admin.GET("/workflows/:id", workflowHandler.GetWorkflow)
+		admin.PUT("/workflows/:id", workflowHandler.UpdateWorkflow)
+		admin.DELETE("/workflows/:id", workflowHandler.DeleteWorkflow)
+		admin.GET("/workflows/:id/tasks", workflowHandler.ListTasks)
+		admin.POST("/workflows/:id/tasks", workflowHandler.AddTask)
+		admin.DELETE("/workflows/:id/tasks/:taskId", workflowHandler.RemoveTask)
+		admin.POST("/workflows/:id/run", workflowHandler.TriggerRun)
+		admin.GET("/workflows/:id/runs", workflowHandler.ListRuns)
+		admin.GET("/workflows/runs/:runId", workflowHandler.GetRun)
+
+		// Phase 5.4: Notebook Scheduler (admin)
+		admin.GET("/notebook-schedules", notebookSchedulerHandler.ListSchedules)
+		admin.POST("/notebook-schedules", notebookSchedulerHandler.CreateSchedule)
+		admin.GET("/notebook-schedules/:id", notebookSchedulerHandler.GetSchedule)
+		admin.PUT("/notebook-schedules/:id", notebookSchedulerHandler.UpdateSchedule)
+		admin.DELETE("/notebook-schedules/:id", notebookSchedulerHandler.DeleteSchedule)
+		admin.GET("/notebook-schedules/:id/runs", notebookSchedulerHandler.ListRuns)
+
+		// Phase 5.5: AI Assistant (editor+)
+		admin.POST("/ai/ask", aiAssistantHandler.Ask)
+		admin.GET("/ai/config", aiAssistantHandler.GetConfig)
+
+		// Phase 5.7: Organizations (superadmin)
+		admin.GET("/orgs/tree", orgHandler.GetTree)
+		admin.GET("/orgs", orgHandler.ListOrgs)
+		admin.POST("/orgs", orgHandler.CreateOrg)
+		admin.GET("/orgs/:id", orgHandler.GetOrg)
+		admin.PUT("/orgs/:id", orgHandler.UpdateOrg)
+		admin.DELETE("/orgs/:id", orgHandler.DeleteOrg)
+		admin.POST("/orgs/:id/assign", orgHandler.AssignUser)
+		admin.GET("/orgs/:id/users", orgHandler.GetUsers)
 }
 
 // connectorSigningKeyFromDB loads the connector signing key from app_secrets,

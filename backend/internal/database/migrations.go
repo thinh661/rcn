@@ -326,6 +326,95 @@ func MigrateAndSeed(cfg *config.Config) error {
 			effective_from TIMESTAMPTZ DEFAULT NOW(),
 			updated_at TIMESTAMPTZ DEFAULT NOW()
 		)`,
+
+		// Phase 5.1: Data Catalog
+		`CREATE TABLE IF NOT EXISTS data_catalog (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR(255) NOT NULL,
+			type VARCHAR(50) NOT NULL,
+			parent_id UUID REFERENCES data_catalog(id) ON DELETE CASCADE,
+			metadata JSONB DEFAULT '{}',
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_catalog_parent ON data_catalog(parent_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_catalog_type ON data_catalog(type)`,
+
+		// Phase 5.2: Workflows
+		`CREATE TABLE IF NOT EXISTS workflows (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR(255) NOT NULL,
+			description TEXT DEFAULT '',
+			user_id UUID NOT NULL REFERENCES admins(id),
+			schedule VARCHAR(100) DEFAULT '',
+			enabled BOOLEAN DEFAULT true,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE TABLE IF NOT EXISTS workflow_tasks (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			workflow_id UUID NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+			name VARCHAR(255) NOT NULL,
+			task_type VARCHAR(50) NOT NULL DEFAULT 'spark_job',
+			config JSONB DEFAULT '{}',
+			depends_on UUID[] DEFAULT '{}',
+			retry_count INTEGER DEFAULT 0,
+			timeout_seconds INTEGER DEFAULT 3600,
+			task_order INTEGER NOT NULL DEFAULT 0,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_wf_tasks_workflow ON workflow_tasks(workflow_id, task_order)`,
+		`CREATE TABLE IF NOT EXISTS workflow_runs (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			workflow_id UUID NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+			status VARCHAR(50) NOT NULL DEFAULT 'pending',
+			triggered_by VARCHAR(255) DEFAULT '',
+			started_at TIMESTAMPTZ,
+			finished_at TIMESTAMPTZ,
+			task_statuses JSONB DEFAULT '{}',
+			error_message TEXT DEFAULT '',
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_wf_runs_workflow ON workflow_runs(workflow_id, created_at DESC)`,
+
+		// Phase 5.4: Notebook Scheduler
+		`CREATE TABLE IF NOT EXISTS notebook_schedules (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			notebook_id UUID NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
+			user_id UUID NOT NULL REFERENCES admins(id),
+			schedule VARCHAR(100) NOT NULL,
+			enabled BOOLEAN DEFAULT true,
+			export_format VARCHAR(20) DEFAULT 'html',
+			notification_email VARCHAR(255) DEFAULT '',
+			last_run_at TIMESTAMPTZ,
+			next_run_at TIMESTAMPTZ,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE TABLE IF NOT EXISTS notebook_schedule_runs (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			schedule_id UUID NOT NULL REFERENCES notebook_schedules(id) ON DELETE CASCADE,
+			status VARCHAR(50) DEFAULT 'pending',
+			output_path TEXT DEFAULT '',
+			error_message TEXT DEFAULT '',
+			started_at TIMESTAMPTZ,
+			finished_at TIMESTAMPTZ,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_nb_schedule_runs ON notebook_schedule_runs(schedule_id, created_at DESC)`,
+
+		// Phase 5.7: Organizations
+		`CREATE TABLE IF NOT EXISTS organizations (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR(255) UNIQUE NOT NULL,
+			description TEXT DEFAULT '',
+			parent_id UUID REFERENCES organizations(id),
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`ALTER TABLE admins ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id)`,
+		`ALTER TABLE admins ADD COLUMN IF NOT EXISTS team_id VARCHAR(255) DEFAULT ''`,
+		`CREATE INDEX IF NOT EXISTS idx_orgs_parent ON organizations(parent_id)`,
 	}
 
 	for _, m := range migrations {

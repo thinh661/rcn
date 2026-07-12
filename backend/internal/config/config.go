@@ -122,6 +122,10 @@ type Config struct {
 	AIModel    string
 	AIEndpoint string
 
+	// MLflow
+	MLflowEnabled     bool
+	MLflowTrackingURI string
+
 	// CORS
 	CORSOrigins []string
 }
@@ -219,6 +223,9 @@ func Load() *Config {
 		AIAPIKey:   getEnv("AI_API_KEY", ""),
 		AIModel:    getEnv("AI_MODEL", "gpt-4o-mini"),
 		AIEndpoint: getEnv("AI_ENDPOINT", ""),
+
+		MLflowEnabled:     getEnvBool("MLFLOW_ENABLED", false),
+		MLflowTrackingURI: getEnv("MLFLOW_TRACKING_URI", "http://mlflow:5000"),
 
 		CORSOrigins: splitCORSOrigins(getEnv("CORS_ORIGINS", "http://localhost:3000")),
 	}

@@ -275,6 +275,10 @@ func main() {
 	aiAssistantSvc := services.NewAIAssistantService(aiCfg)
 	aiAssistantHandler := handlers.NewAIAssistantHandler(aiAssistantSvc)
 
+	// Phase 5.3: MLflow
+	mlflowSvc := services.NewMLflowService(cfg.MLflowEnabled, cfg.MLflowTrackingURI)
+	mlflowHandler := handlers.NewMLflowHandler(mlflowSvc)
+
 	// Phase 5.7: Organizations
 	orgSvc := services.NewOrgService()
 	orgHandler := handlers.NewOrgHandler(orgSvc)
@@ -614,6 +618,11 @@ func main() {
 		admin.DELETE("/orgs/:id", orgHandler.DeleteOrg)
 		admin.POST("/orgs/:id/assign", orgHandler.AssignUser)
 		admin.GET("/orgs/:id/users", orgHandler.GetUsers)
+
+		// Phase 5.3: MLflow proxy
+		if cfg.MLflowEnabled {
+			admin.Any("/mlflow/*path", mlflowHandler.Proxy)
+		}
 }
 
 // connectorSigningKeyFromDB loads the connector signing key from app_secrets,

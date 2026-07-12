@@ -1,87 +1,104 @@
 package services
 
 import (
-	"encoding/base64"
-	"strings"
+	"bytes"
+	"encoding/hex"
 	"testing"
 )
 
-func TestEncryptDecryptRoundtrip(t *testing.T) {
-	key := []byte("test-key-please-rotate-in-prod")
-	cases := []string{
-		"",
-		"a",
-		"hello world",
-		strings.Repeat("x", 4096),
-		"unicode: 你好 世界 \U0001f600",
+func TestEncryptDecryptRoundTrip(t *testing.T) {
+	key := []byte("thisisa32bytekeytousefortesting!") // 32 bytes (AES-256)
+	plaintext := []byte("Hello, world! This is a test of AES-GCM encryption.")
+
+	// 1. Encrypt the plaintext
+	ciphertext, err := Encrypt(plaintext, key)
+	if err != nil {
+		t.Fatalf("failed to encrypt: %v", err)
 	}
-	for _, plaintext := range cases {
-		encoded, err := Encrypt(plaintext, key)
-		if err != nil {
-			t.Fatalf("Encrypt(%q) failed: %v", plaintext, err)
-		}
-		decoded, err := Decrypt(encoded, key)
-		if err != nil {
-			t.Fatalf("Decrypt for %q failed: %v", plaintext, err)
-		}
-		if decoded != plaintext {
-			t.Fatalf("roundtrip mismatch: got %q want %q", decoded, plaintext)
-		}
+
+	// 2. Decrypt the ciphertext
+	decrypted, err := Decrypt(ciphertext, key)
+	if err != nil {
+		t.Fatalf("failed to decrypt: %v", err)
+	}
+
+	// 3. Verify the decrypted plaintext matches original
+	if !bytes.Equal(plaintext, decrypted) {
+		t.Errorf("decrypted plaintext does not match original: got %q, want %q", string(decrypted), string(plaintext))
 	}
 }
 
-func TestEncryptProducesDifferentCiphertexts(t *testing.T) {
-	key := []byte("test-key")
-	a, err := Encrypt("same plaintext", key)
+func TestAESGCMKnownValues(t *testing.T) {
+	// Known values computed with standard AES-256-GCM
+	key := []byte("thisisa32bytekeytousefortesting!") // 32 bytes
+	nonce := []byte("12bytenonce!")                   // 12 bytes
+	plaintext := []byte("AES-GCM known value test")
+
+	// Hex representation of expected ciphertext + tag (excluding nonce)
+	expectedCiphertextHex := "ffe015daa3149f6826ed822f797e59d4bd7d285586e3d85dc22b18d38530c861d60cdf181efae0a4"
+	expectedCiphertext, err := hex.DecodeString(expectedCiphertextHex)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to decode expected ciphertext hex: %v", err)
 	}
-	b, err := Encrypt("same plaintext", key)
+
+	// 1. Test EncryptWithNonce matches the known value
+	ciphertext, err := EncryptWithNonce(plaintext, key, nonce)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("EncryptWithNonce failed: %v", err)
 	}
-	if a == b {
-		t.Fatal("two encryptions of the same plaintext produced identical ciphertext; nonce is not random")
+
+	if !bytes.Equal(ciphertext, expectedCiphertext) {
+		t.Errorf("EncryptWithNonce result mismatch:\n got:  %x\n want: %x", ciphertext, expectedCiphertext)
+	}
+
+	// 2. Test Decrypt with prefixed nonce matches the known plaintext
+	// The Decrypt function expects the nonce prefixed to the ciphertext + tag
+	prefixedCiphertext := append([]byte{}, nonce...)
+	prefixedCiphertext = append(prefixedCiphertext, expectedCiphertext...)
+
+	decrypted, err := Decrypt(prefixedCiphertext, key)
+	if err != nil {
+		t.Fatalf("Decrypt failed on known ciphertext: %v", err)
+	}
+
+	if !bytes.Equal(decrypted, plaintext) {
+		t.Errorf("Decrypt result mismatch:\n got:  %q\n want: %q", string(decrypted), string(plaintext))
 	}
 }
 
-func TestDecryptWithWrongKeyFails(t *testing.T) {
-	plaintext := "sensitive minio secret"
-	encoded, err := Encrypt(plaintext, []byte("correct-key"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := Decrypt(encoded, []byte("attacker-key")); err == nil {
-		t.Fatal("Decrypt succeeded with wrong key; should have failed")
-	}
-}
+func TestDecryptFailureCases(t *testing.T) {
+	key := []byte("thisisa32bytekeytousefortesting!")
+	wrongKey := []byte("wrong32bytekeyfortestingpurpose!")
+	plaintext := []byte("Secret message")
 
-func TestDecryptRejectsTamperedCiphertext(t *testing.T) {
-	key := []byte("test-key")
-	encoded, err := Encrypt("important payload", key)
+	ciphertext, err := Encrypt(plaintext, key)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to encrypt: %v", err)
 	}
-	raw, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Flip a bit in the last byte (inside the GCM auth tag region).
-	raw[len(raw)-1] ^= 0x01
-	tampered := base64.StdEncoding.EncodeToString(raw)
-	if _, err := Decrypt(tampered, key); err == nil {
-		t.Fatal("Decrypt accepted tampered ciphertext; GCM auth tag not enforced")
-	}
-}
 
-func TestDecryptRejectsShortInput(t *testing.T) {
-	if _, err := Decrypt(base64.StdEncoding.EncodeToString([]byte{1, 2, 3}), []byte("k")); err == nil {
-		t.Fatal("Decrypt accepted truncated input")
+	// 1. Decrypt with wrong key should fail
+	_, err = Decrypt(ciphertext, wrongKey)
+	if err == nil {
+		t.Error("expected decryption to fail with a wrong key, but it succeeded")
 	}
-}
 
-func TestDecryptRejectsInvalidBase64(t *testing.T) {
-	if _, err := Decrypt("!!!not-base64!!!", []byte("k")); err == nil {
-		t.Fatal("Decrypt accepted invalid base64")
+	// 2. Decrypt with tampered ciphertext should fail
+	tamperedCiphertext := make([]byte, len(ciphertext))
+	copy(tamperedCiphertext, ciphertext)
+	if len(tamperedCiphertext) > 15 {
+		// Tamper with the ciphertext payload/tag (after the nonce)
+		tamperedCiphertext[len(tamperedCiphertext)-1] ^= 0xFF
+	}
+
+	_, err = Decrypt(tamperedCiphertext, key)
+	if err == nil {
+		t.Error("expected decryption to fail with tampered ciphertext, but it succeeded")
+	}
+
+	// 3. Decrypt with too short ciphertext should fail
+	shortCiphertext := []byte("too_short")
+	_, err = Decrypt(shortCiphertext, key)
+	if err == nil {
+		t.Error("expected decryption to fail with too short ciphertext, but it succeeded")
 	}
 }

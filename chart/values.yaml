@@ -270,7 +270,8 @@ ingress:
   enabled: true
   className: traefik        # match your ingress controller (nginx, traefik, ...)
   host: rcn.lakehouse.local
-  annotations: {}
+  annotations:
+    argocd.argoproj.io/skip-health-check: "true"
   tls:
     enabled: true
     secretName: rcn-tls

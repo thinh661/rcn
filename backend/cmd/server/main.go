@@ -283,6 +283,10 @@ func main() {
 	orgSvc := services.NewOrgService()
 	orgHandler := handlers.NewOrgHandler(orgSvc)
 
+	// Phase 5.10: Delta Sharing
+	deltaSvc := services.NewDeltaSharingService(cfg.DeltaSharingEnabled, cfg.DeltaSharingURL)
+	deltaHandler := handlers.NewDeltaSharingHandler(deltaSvc)
+
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -622,6 +626,14 @@ func main() {
 		// Phase 5.3: MLflow proxy
 		if cfg.MLflowEnabled {
 			admin.Any("/mlflow/*path", mlflowHandler.Proxy)
+		}
+
+		// Phase 5.10: Delta Sharing (superadmin)
+		if cfg.DeltaSharingEnabled {
+			admin.GET("/delta-sharing/config", deltaHandler.GetConfig)
+			admin.GET("/delta-sharing/shares", deltaHandler.ListShares)
+			admin.POST("/delta-sharing/shares", deltaHandler.CreateShare)
+			admin.DELETE("/delta-sharing/shares/:id", deltaHandler.RevokeShare)
 		}
 }
 

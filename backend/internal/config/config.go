@@ -126,6 +126,10 @@ type Config struct {
 	MLflowEnabled     bool
 	MLflowTrackingURI string
 
+	// Delta Lake / Delta Sharing
+	DeltaSharingEnabled bool
+	DeltaSharingURL     string
+
 	// CORS
 	CORSOrigins []string
 }
@@ -226,6 +230,9 @@ func Load() *Config {
 
 		MLflowEnabled:     getEnvBool("MLFLOW_ENABLED", false),
 		MLflowTrackingURI: getEnv("MLFLOW_TRACKING_URI", "http://mlflow:5000"),
+
+		DeltaSharingEnabled: getEnvBool("DELTA_SHARING_ENABLED", false),
+		DeltaSharingURL:     getEnv("DELTA_SHARING_URL", "http://delta-sharing:8080"),
 
 		CORSOrigins: splitCORSOrigins(getEnv("CORS_ORIGINS", "http://localhost:3000")),
 	}

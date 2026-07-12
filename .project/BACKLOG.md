@@ -102,7 +102,7 @@ Xây dựng RCN từ Spark Notebook platform thành Spark Enterprise All-in-One 
 | 5.7 | Team/Org Tree | 🏗️ Backend | 🟢 Done | agy + main |
 | 5.8 | API Docs (Swagger) | 📦 Tooling | 🟢 Done | agy |
 | 5.9 | Unit + Integration Tests | 🔧 Quality | 🟢 Done | agy |
-| 5.10 | Delta Lake / Delta Sharing | ⚡ Config | 🔵 Backlog | - |
+| 5.10 | Delta Lake / Delta Sharing | ⚡ Config | 🟢 Done | agy |
 
 ---
 

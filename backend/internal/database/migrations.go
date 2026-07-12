@@ -415,6 +415,16 @@ func MigrateAndSeed(cfg *config.Config) error {
 		`ALTER TABLE admins ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id)`,
 		`ALTER TABLE admins ADD COLUMN IF NOT EXISTS team_id VARCHAR(255) DEFAULT ''`,
 		`CREATE INDEX IF NOT EXISTS idx_orgs_parent ON organizations(parent_id)`,
+
+		// Phase 5.10: Delta Sharing
+		`CREATE TABLE IF NOT EXISTS delta_shares (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR(255) NOT NULL,
+			table_name VARCHAR(255) NOT NULL,
+			share_with VARCHAR(255) NOT NULL DEFAULT '',
+			status VARCHAR(50) DEFAULT 'active',
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
 	}
 
 	for _, m := range migrations {

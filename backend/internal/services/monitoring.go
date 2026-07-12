@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/rs/zerolog/log"
 
 	"github.com/rcn/rcn/backend/internal/database"
 )
@@ -224,30 +223,11 @@ func (hc *HealthChecker) checkDatabase(ctx context.Context) HealthCheckResult {
 	}
 
 	// Check connection stats
-	var stats struct {
-		MaxOpenConns    int
-		OpenConns       int
-		InUse           int
-		Idle            int
-		WaitCount       int64
-		WaitDuration    time.Duration
-		MaxIdleClosed   int64
-		MaxIdleTimeClosed int64
-		MaxLifetimeClosed  int64
-	}
-
 	dbStats := db.Stats()
-	stats.MaxOpenConns = dbStats.MaxOpenConns
-	stats.OpenConns = dbStats.OpenConns
-	stats.InUse = dbStats.InUse
-	stats.Idle = dbStats.Idle
-	stats.WaitCount = dbStats.WaitCount
-	stats.WaitDuration = dbStats.WaitDuration
-	stats.MaxIdleClosed = dbStats.MaxIdleClosed
 
 	result.Status = "ok"
 	result.Message = fmt.Sprintf("open=%d inuse=%d idle=%d waits=%d",
-		stats.OpenConns, stats.InUse, stats.Idle, stats.WaitCount)
+		dbStats.OpenConnections, dbStats.InUse, dbStats.Idle, dbStats.WaitCount)
 	result.Latency = time.Since(start).Round(time.Millisecond).String()
 
 	return result

@@ -171,7 +171,7 @@ func (s *GitIntegrationService) GetStatus(ctx context.Context, notebookID string
 // CommitNotebook generates the git commit commands and records the commit.
 // In production, this would use a Go git library to perform the actual commit.
 func (s *GitIntegrationService) CommitNotebook(ctx context.Context, notebookID, userID, commitMessage string) (*GitCommitResult, error) {
-	link, err := s.GetLink(ctx, notebookID)
+	_, err := s.GetLink(ctx, notebookID)
 	if err != nil {
 		return nil, err
 	}

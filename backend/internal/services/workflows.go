@@ -254,7 +254,7 @@ func (s *WorkflowService) AddTask(ctx context.Context, workflowID, name, taskTyp
 	`
 
 	var t WorkflowTask
-	err := db.QueryRowContext(ctx, query, id, workflowID, name, taskType, config, pq.Array(dependsOn)).Scan(
+	err = db.QueryRowContext(ctx, query, id, workflowID, name, taskType, config, pq.Array(dependsOn)).Scan(
 		&t.ID,
 		&t.WorkflowID,
 		&t.Name,
@@ -369,7 +369,7 @@ func (s *WorkflowService) TriggerRun(ctx context.Context, workflowID, triggeredB
 	`
 
 	var r WorkflowRun
-	err := db.QueryRowContext(ctx, query, id, workflowID, triggeredBy).Scan(
+	err = db.QueryRowContext(ctx, query, id, workflowID, triggeredBy).Scan(
 		&r.ID,
 		&r.WorkflowID,
 		&r.Status,

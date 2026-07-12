@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 )
 
 // AIAssistantConfig holds configuration for the AI assistant.

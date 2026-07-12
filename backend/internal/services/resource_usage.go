@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rcn/rcn/backend/internal/config"
 	"github.com/rcn/rcn/backend/internal/database"
 )
 

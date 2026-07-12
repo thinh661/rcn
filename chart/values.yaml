@@ -9,7 +9,7 @@ image:
   backend:
     repository: ghcr.io/sparklabx/backend
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
   frontend:
     repository: ghcr.io/sparklabx/frontend
     tag: latest

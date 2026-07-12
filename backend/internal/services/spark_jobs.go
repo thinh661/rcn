@@ -205,7 +205,13 @@ func (s *SparkJobService) Submit(ctx context.Context, req *SubmitJobRequest, use
 		string(job.Status), job.SparkApplicationName, webhookURL,
 	)
 	if err != nil {
-		log.Warn().Err(err).Str("job_id", jobID).Msg("failed to persist spark_job to DB")
+		log.Warn().Err(err).Str("job_id", jobID).Msg("failed to persist spark_job to DB, rolling back CRD")
+		deleteErr := s.dynamicClient.Resource(sparkAppGVR).Namespace(s.namespace).
+			Delete(ctx, appName, metav1.DeleteOptions{})
+		if deleteErr != nil {
+			log.Error().Err(deleteErr).Str("app", appName).Msg("failed to rollback CRD after DB failure")
+		}
+		return nil, fmt.Errorf("persist spark_job to DB: %w", err)
 	}
 
 	s.syncApplicationStatus(ctx, appName)
@@ -464,7 +470,11 @@ func (s *SparkJobService) buildSparkApplication(name, jobType string, req *Submi
 
 	// Driver spec
 	_ = unstructured.SetNestedField(app.Object, driverCPU, "spec", "driver", "cores")
-	coreLimitQty := resource.MustParse(driverCPU)
+	coreLimitQty, err := resource.ParseQuantity(driverCPU)
+	if err != nil {
+		log.Warn().Err(err).Str("cpu", driverCPU).Msg("invalid driver cpu limit, falling back to 1")
+		coreLimitQty = resource.MustParse("1")
+	}
 	_ = unstructured.SetNestedField(app.Object, coreLimitQty.String(), "spec", "driver", "coreLimit")
 	_ = unstructured.SetNestedField(app.Object, driverMem, "spec", "driver", "memory")
 	_ = unstructured.SetNestedField(app.Object, "spark", "spec", "driver", "serviceAccount")

@@ -364,19 +364,36 @@ func (g *K8sPerUserGateway) GetGatewayURL(ctx context.Context, userID string) (s
 	if err := g.EnsureSpawning(userID, nil); err != nil {
 		return "", err
 	}
-	url, spawnErr := g.spawnAndWait(ctx, userID, podName, g.rowSizes(userID))
-	if spawnErr != nil {
-		g.updatePhase(userID, PhaseFailed, spawnErr.Error())
-		return "", spawnErr
+
+	// Wait for the pod to become ready or fail by checking DB status.
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-ticker.C:
+			var status, podURL, phaseMsg string
+			err := db.QueryRow(
+				`SELECT status, pod_url, phase_message FROM user_kernel_pods WHERE user_id = $1`,
+				userID,
+			).Scan(&status, &podURL, &phaseMsg)
+			if err != nil {
+				return "", fmt.Errorf("query pod status: %w", err)
+			}
+			switch status {
+			case PhaseReady:
+				if podURL != "" {
+					return podURL, nil
+				}
+			case PhaseFailed:
+				return "", fmt.Errorf("spawn failed: %s", phaseMsg)
+			case "":
+				// Row disappeared (e.g., destroyed/reaped)
+				return "", fmt.Errorf("pod spawning cancelled or row deleted")
+			}
+		}
 	}
-	_, err := db.Exec(
-		`UPDATE user_kernel_pods SET pod_url = $1, status = $2, phase_message = $3, last_used_at = $4 WHERE user_id = $5`,
-		url, PhaseReady, "Kernel ready", time.Now(), userID,
-	)
-	if err != nil {
-		log.Warn().Err(err).Str("user_id", userID).Msg("failed to mark pod ready in db")
-	}
-	return url, nil
 }
 
 // EnsureSpawning kicks off pod spawn in a goroutine if no spawn is in flight
@@ -679,6 +696,27 @@ func (g *K8sPerUserGateway) rowSizes(userID string) podSizes {
 }
 
 func (g *K8sPerUserGateway) buildPodSpec(userID, podName string, res podSizes) *corev1.Pod {
+	cpuReq, err := resource.ParseQuantity(res.cpuReq)
+	if err != nil {
+		log.Warn().Err(err).Str("cpu", res.cpuReq).Msg("invalid cpu request, falling back to default")
+		cpuReq = resource.MustParse(g.cfg.CPURequest)
+	}
+	memReq, err := resource.ParseQuantity(res.memReq)
+	if err != nil {
+		log.Warn().Err(err).Str("memory", res.memReq).Msg("invalid memory request, falling back to default")
+		memReq = resource.MustParse(g.cfg.MemoryRequest)
+	}
+	cpuLim, err := resource.ParseQuantity(res.cpuLim)
+	if err != nil {
+		log.Warn().Err(err).Str("cpu", res.cpuLim).Msg("invalid cpu limit, falling back to default")
+		cpuLim = resource.MustParse(g.cfg.CPULimit)
+	}
+	memLim, err := resource.ParseQuantity(res.memLim)
+	if err != nil {
+		log.Warn().Err(err).Str("memory", res.memLim).Msg("invalid memory limit, falling back to default")
+		memLim = resource.MustParse(g.cfg.MemoryLimit)
+	}
+
 	// Resolve per-user MinIO creds. Empty creds → fall back to root creds via
 	// SecretKeyRef (legacy / IAM-not-configured). Per-user creds are injected
 	// as plain env values; the pod is per-user and ephemeral so leakage risk
@@ -772,12 +810,12 @@ func (g *K8sPerUserGateway) buildPodSpec(userID, podName string, res podSizes) *
 					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse(res.cpuReq),
-							corev1.ResourceMemory: resource.MustParse(res.memReq),
+							corev1.ResourceCPU:    cpuReq,
+							corev1.ResourceMemory: memReq,
 						},
 						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse(res.cpuLim),
-							corev1.ResourceMemory: resource.MustParse(res.memLim),
+							corev1.ResourceCPU:    cpuLim,
+							corev1.ResourceMemory: memLim,
 						},
 					},
 					// Spark s3a reads these from env to build core-site.xml / spark-defaults
@@ -1037,9 +1075,6 @@ func (g *K8sPerUserGateway) reapOnce() {
 // the Layer C self-heal). The sweep covers users who quit and come back
 // later, plus admin pods that hit OOM overnight.
 func (g *K8sPerUserGateway) reapDeadPods() {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
 	db := database.GetDB()
 	rows, err := db.Query(`SELECT user_id, pod_name FROM user_kernel_pods WHERE status = $1`, PhaseReady)
 	if err != nil {
@@ -1056,21 +1091,25 @@ func (g *K8sPerUserGateway) reapDeadPods() {
 	rows.Close()
 
 	for _, v := range victims {
-		p, err := g.client.CoreV1().Pods(g.cfg.Namespace).Get(ctx, v.podName, metav1.GetOptions{})
+		opCtx, opCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		p, err := g.client.CoreV1().Pods(g.cfg.Namespace).Get(opCtx, v.podName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				db.Exec(`DELETE FROM user_kernel_pods WHERE user_id = $1`, v.userID)
 				log.Info().Str("user_id", v.userID).Str("pod", v.podName).Msg("reapDead: pod gone, cleared row")
 			}
+			opCancel()
 			continue
 		}
 		dead, reason := podIsDead(p)
 		if !dead {
+			opCancel()
 			continue
 		}
 		log.Info().Str("user_id", v.userID).Str("pod", v.podName).Str("reason", reason).Msg("reapDead: destroying unhealthy pod")
-		_ = g.client.CoreV1().Pods(g.cfg.Namespace).Delete(ctx, v.podName, metav1.DeleteOptions{})
+		_ = g.client.CoreV1().Pods(g.cfg.Namespace).Delete(opCtx, v.podName, metav1.DeleteOptions{})
 		db.Exec(`DELETE FROM user_kernel_pods WHERE user_id = $1`, v.userID)
+		opCancel()
 	}
 }
 
@@ -1136,7 +1175,9 @@ func (g *K8sPerUserGateway) sweepOrphanPods() {
 			continue
 		}
 		log.Info().Str("pod", p.Name).Msg("sweepOrphans: deleting untracked kernel pod")
-		_ = g.client.CoreV1().Pods(g.cfg.Namespace).Delete(ctx, p.Name, metav1.DeleteOptions{})
+		deleteCtx, deleteCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		_ = g.client.CoreV1().Pods(g.cfg.Namespace).Delete(deleteCtx, p.Name, metav1.DeleteOptions{})
+		deleteCancel()
 	}
 }
 

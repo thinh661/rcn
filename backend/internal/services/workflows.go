@@ -230,7 +230,23 @@ func (s *WorkflowService) AddTask(ctx context.Context, workflowID, name, taskTyp
 		return nil, fmt.Errorf("database connection is nil")
 	}
 
+	// Fetch existing tasks to validate DAG before adding
+	existingTasks, err := s.ListTasks(ctx, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list existing tasks for validation: %w", err)
+	}
+
 	id := uuid.New().String()
+
+	// Create mock new task to check for cycle
+	newTask := WorkflowTask{
+		ID:        id,
+		DependsOn: dependsOn,
+	}
+	allTasks := append(existingTasks, newTask)
+	if err := ValidateDAG(allTasks); err != nil {
+		return nil, fmt.Errorf("invalid DAG: %w", err)
+	}
 	query := `
 		INSERT INTO workflow_tasks (id, workflow_id, name, task_type, config, depends_on, retry_count, timeout_seconds, task_order, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, 3, 3600, 0, NOW())
@@ -334,6 +350,15 @@ func (s *WorkflowService) TriggerRun(ctx context.Context, workflowID, triggeredB
 	db := database.GetDB()
 	if db == nil {
 		return nil, fmt.Errorf("database connection is nil")
+	}
+
+	// Validate DAG before triggering run
+	tasks, err := s.ListTasks(ctx, workflowID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list tasks for validation: %w", err)
+	}
+	if err := ValidateDAG(tasks); err != nil {
+		return nil, fmt.Errorf("invalid DAG: %w", err)
 	}
 
 	id := uuid.New().String()
@@ -442,4 +467,39 @@ func (s *WorkflowService) ListRuns(ctx context.Context, workflowID string) ([]Wo
 	}
 
 	return list, nil
+}
+
+func ValidateDAG(tasks []WorkflowTask) error {
+	// Build adjacency list
+	graph := make(map[string][]string)
+	for _, t := range tasks {
+		graph[t.ID] = t.DependsOn
+	}
+	// DFS cycle detection
+	visited := make(map[string]bool)
+	inStack := make(map[string]bool)
+	var dfs func(node string) error
+	dfs = func(node string) error {
+		if inStack[node] {
+			return fmt.Errorf("cycle detected involving task %s", node)
+		}
+		if visited[node] {
+			return nil
+		}
+		visited[node] = true
+		inStack[node] = true
+		for _, dep := range graph[node] {
+			if err := dfs(dep); err != nil {
+				return err
+			}
+		}
+		inStack[node] = false
+		return nil
+	}
+	for _, t := range tasks {
+		if err := dfs(t.ID); err != nil {
+			return err
+		}
+	}
+	return nil
 }

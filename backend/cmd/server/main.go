@@ -636,6 +636,12 @@ func main() {
 			admin.DELETE("/delta-sharing/shares/:id", deltaHandler.RevokeShare)
 		}
 }
+
+	addr := ":" + cfg.ServicePort
+	log.Info().Str("addr", addr).Msg("server listening")
+	if err := router.Run(addr); err != nil {
+		log.Fatal().Err(err).Msg("server failed")
+	}
 }
 
 // connectorSigningKeyFromDB loads the connector signing key from app_secrets,

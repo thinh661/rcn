@@ -258,7 +258,7 @@ func main() {
 
 	// Phase 5.2: Workflows
 	workflowSvc := services.NewWorkflowService()
-	workflowHandler := handlers.NewWorkflowHandler(workflowSvc)
+	workflowHandler := handlers.NewWorkflowsHandler(workflowSvc)
 
 	// Phase 5.4: Notebook Scheduler
 	notebookSchedulerSvc := services.NewNotebookSchedulerService()
@@ -635,6 +635,7 @@ func main() {
 			admin.POST("/delta-sharing/shares", deltaHandler.CreateShare)
 			admin.DELETE("/delta-sharing/shares/:id", deltaHandler.RevokeShare)
 		}
+}
 }
 
 // connectorSigningKeyFromDB loads the connector signing key from app_secrets,

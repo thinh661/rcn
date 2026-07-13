@@ -96,8 +96,8 @@ jobs:
             context: .
             dockerfile: backend/Dockerfile
             build_args: ""
-            # Multi-arch for backend (tiny Go binary)
-            platforms: linux/amd64,linux/arm64
+            # Single-arch for now (QEMU arm64 causes buildx failures)
+            platforms: linux/amd64
           - image: frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
